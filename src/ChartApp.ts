@@ -1,14 +1,16 @@
 import { Renderer, BatchRenderer } from "@pixi/core";
 import { InteractionManager } from "@pixi/interaction";
 import { Container } from "@pixi/display";
-import {Chart, CHART_EVENTS} from "./Chart";
+
+import { Chart} from "./core/Chart";
+import { CHART_EVENTS } from "./core/CHART_EVENTS";
 
 Renderer.registerPlugin('batch', BatchRenderer);
 Renderer.registerPlugin('interaction', InteractionManager);
 
 export class ChartApp {
     readonly renderer: Renderer;
-    readonly stage: Container;
+    readonly stage: Container = new Container();
 
     constructor(canvasOrId: HTMLCanvasElement | string) {
         const view = canvasOrId instanceof HTMLCanvasElement
@@ -21,8 +23,6 @@ export class ChartApp {
             width: view.clientWidth * scale,
             height: view.clientHeight * scale,
         });
-
-        this.stage = new Container();
 
         this.draw = this.draw.bind(this);
         this.onChartUpdate = this.onChartUpdate.bind(this);
@@ -63,16 +63,18 @@ export class ChartApp {
     }
 
     private _unbindEvents (chart: Chart): void {
-        chart.removeListener(CHART_EVENTS.UPDATE, this.onChartUpdate);
-        chart.removeListener(CHART_EVENTS.DESTROY, this.removeChart);
+        chart.off(CHART_EVENTS.UPDATE, this.onChartUpdate);
+        chart.off(CHART_EVENTS.DESTROY, this.removeChart);
     }
 
     private _bindEvents (chart: Chart): void {
-        chart.addListener(CHART_EVENTS.UPDATE, this.onChartUpdate);
-        chart.addListener(CHART_EVENTS.DESTROY, this.removeChart);
+        chart.on(CHART_EVENTS.UPDATE, this.onChartUpdate);
+        chart.on(CHART_EVENTS.DESTROY, this.removeChart);
     }
 
     public draw() {
-        this.stage.render(this.renderer);
+        this.renderer.render(this.stage);
     }
 }
+
+

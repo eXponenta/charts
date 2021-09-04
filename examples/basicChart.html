@@ -1,0 +1,16 @@
+<script src="https://pixijs.download/v6.1.2/pixi.js"></script>
+<script src="./../dist/pixi-charts.umd.js"></script>
+<canvas width="300" height="200" id="chart"></canvas>
+
+<script>
+    const app = new PIXI.charts.ChartApp('#chart');
+    const chart = new PIXI.charts.Chart({
+        labels: [],
+        data: [
+            10, 20, 30, 40, 10, 20, 30, 40
+        ]
+    });
+
+    app.addChart(chart, "test");
+    app.draw();
+</script>
