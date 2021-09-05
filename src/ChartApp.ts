@@ -11,6 +11,12 @@ Renderer.registerPlugin('interaction', InteractionManager);
 export class ChartApp {
     readonly renderer: Renderer;
     readonly stage: Container = new Container();
+    readonly size: {
+        width: number,
+        height: number
+    } = {
+        width: 0, height: 0
+    };
 
     constructor(canvasOrId: HTMLCanvasElement | string) {
         const view = canvasOrId instanceof HTMLCanvasElement
@@ -18,15 +24,37 @@ export class ChartApp {
                 : document.querySelector<HTMLCanvasElement>(canvasOrId);
 
         const scale = window.devicePixelRatio;
+        this.size.width = view.clientWidth * scale;
+        this.size.height = view.clientHeight * scale;
         this.renderer = new Renderer({
             view,
-            width: view.clientWidth * scale,
-            height: view.clientHeight * scale,
+            width: this.size.width,
+            height: this.size.height,
+            backgroundAlpha: 0,
+            useContextAlpha: true,
         });
 
         this.draw = this.draw.bind(this);
+        this.onDimensionUpdate = this.onDimensionUpdate.bind(this);
         this.onChartUpdate = this.onChartUpdate.bind(this);
         this.removeChart = this.removeChart.bind(this);
+
+        //@ts-ignore
+        new self.ResizeObserver(this.onDimensionUpdate).observe(view);
+    }
+
+    private onDimensionUpdate () {
+        const view = this.renderer.view;
+        this.size.width = view.clientWidth * window.devicePixelRatio;
+        this.size.height = view.clientHeight * window.devicePixelRatio;
+
+        this.renderer.resize(
+            this.size.width,
+            this.size.height
+        );
+
+        this.stage.children
+            .forEach(e => (<Chart> e).setViewport(0,0, this.size.width, this.size.height) )
     }
 
     private onChartUpdate(chart: Chart) {
@@ -39,6 +67,7 @@ export class ChartApp {
         }
 
         chart.name = name;
+        chart.setViewport(0,0, this.size.width, this.size.height);
 
         this._bindEvents(chart);
 

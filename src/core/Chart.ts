@@ -8,6 +8,8 @@ import {LineGraphicsDrawer} from "../drawers/charts/LineGraphicsDrawer";
 import {BasePIXIDrawer} from "../drawers/BasePIXIDrawer";
 import {CHART_EVENTS} from "./CHART_EVENTS";
 import {CHART_TYPE} from "./CHART_TYPE";
+import {Rectangle} from "@pixi/math";
+import {LINE_JOIN} from "@pixi/graphics";
 
 export type ILabelData = Array<string | Date | number>;
 export type IArrayData = ArrayLike<number>;
@@ -28,10 +30,43 @@ export interface IDataProvider extends IDataSetModel {
     fetch(from?: number, to?: number): IData;
 }
 
+const DEFAULT_STYLE: IChartStyle = {
+    fill: 0x0,
+    stroke: 0x0,
+    thickness: 2,
+    lineJoint: LINE_JOIN.BEVEL
+};
+
+export interface IChartStyle {
+    fill?: number | string | [number, number, number, number];
+    stroke?: number  | string | [number, number, number, number];
+    thickness?: number,
+    lineJoint?: string;
+}
+
 export interface IChartDataOptions {
     type: CHART_TYPE;
     labels?: ILabelData | ILabelDataProvider;
-    data: IDataSetModel | IDataProvider | IData
+    data: IDataSetModel | IDataProvider | IData;
+    style?: IChartStyle;
+}
+
+function validate(options: IChartDataOptions): IChartDataOptions {
+    const result = {...options};
+
+    if (!options.data) {
+        throw  new Error('[Validate] Chart data must be presented!');
+    }
+
+    result.style =  {...DEFAULT_STYLE, ...(options.style) || {}};
+
+    // validate joints
+    const joint = result.style.lineJoint;
+    result.style.lineJoint = joint && (result.style.lineJoint in LINE_JOIN)
+            ? joint
+            : LINE_JOIN.BEVEL;
+
+    return result;
 }
 
 export class Chart extends Container {
@@ -40,14 +75,17 @@ export class Chart extends Container {
     public readonly chartDrawer: BasePIXIDrawer;
     public readonly labelDrawer: BasePIXIDrawer;
     public readonly gridDrawer: BasePIXIDrawer;
+    public readonly viewport: Rectangle = new Rectangle();
 
     public dataProvider: IDataProvider;
     public labelProvider: ILabelDataProvider;
 
     constructor (
-        private readonly options: IChartDataOptions
+        public readonly options: IChartDataOptions
     ) {
         super();
+
+        this.options = validate(options);
 
         this.onRangeChanged = this.onRangeChanged.bind(this);
 
@@ -110,6 +148,16 @@ export class Chart extends Container {
         // Generate a labels when it not present
         this.labelProvider = new ArrayLikeDataProvider(labels as IArrayData);
 
+        this._emitUpdate();
+    }
+
+    public setViewport (x: number, y: number, width: number, height: number): void {
+        this.viewport.x = x;
+        this.viewport.y = y;
+        this.viewport.width = width;
+        this.viewport.height = height;
+
+        this.emit(CHART_EVENTS.RESIZE, this);
         this._emitUpdate();
     }
 

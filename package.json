@@ -24,7 +24,7 @@
     "start": "parallelshell \"yarn watch\"",
     "watch": "tsc -w",
     "prebuild": "yarn cleanup",
-    "build": "rollup -c node_modules/@pixi-build-tools/rollup-configurator/index.js && yarn build:types",
+    "build": "rollup -c ./rollup.config.js && yarn build:types",
     "build:types": "rimraf ./compile && tsc -p ./tsconfig.compile.json && api-extractor run",
     "docs": "typedoc --out ./docs/ --readme README.md ./src/",
     "lint": "eslint ./src/**/*",
@@ -85,5 +85,8 @@
     "rollup-plugin-typescript": "^1.0.1",
     "tslib": "^2.0.1",
     "typescript": "^3.9.7"
+  },
+  "dependencies": {
+    "color-parse": "^1.4.2"
   }
 }

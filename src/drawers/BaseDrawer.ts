@@ -1,8 +1,9 @@
-import type {Chart} from "../core/Chart";
+import type {Chart, IChartStyle} from "../core/Chart";
 import {CHART_TYPE} from "../core/CHART_TYPE";
 import {TARGET_TYPE} from "../core/TARGET_TYPE";
 import {BACKEND_TYPE} from "./BACKEND_TYPE";
 import {CHART_EVENTS} from "../core/CHART_EVENTS";
+import {parseStyle} from "./Utils";
 
 export class BaseDrawer {
     public static readonly BACKEND_TYPE: BACKEND_TYPE = BACKEND_TYPE.NONE;
@@ -34,6 +35,10 @@ export class BaseDrawer {
 
     public reset() {
 
+    }
+
+    public getParsedStyle(): IChartStyle {
+        return parseStyle(this.chart.options.style);
     }
 }
 

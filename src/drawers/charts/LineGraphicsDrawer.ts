@@ -1,8 +1,9 @@
-import { Graphics } from "@pixi/graphics";
+import {hex2rgb, rgb2hex} from "@pixi/utils";
 import { BasePIXIDrawer } from "../BasePIXIDrawer";
 import { CHART_TYPE } from "../../core/CHART_TYPE";
 import { TARGET_TYPE } from "../../core/TARGET_TYPE";
-import type { Chart } from "../../core/Chart";
+import { Plot } from "../../../pixi-candles/src";
+import {LINE_JOIN} from "@pixi/graphics";
 
 export class LineGraphicsDrawer extends BasePIXIDrawer {
     public static readonly CHART_TYPE = CHART_TYPE.LINE;
@@ -11,7 +12,7 @@ export class LineGraphicsDrawer extends BasePIXIDrawer {
     private _lastDirtyId = 0;
     private _dirtyId = -1;
 
-    public readonly node: Graphics = new Graphics();
+    public readonly node: Plot = new Plot(null);
 
     public update() {
         const node = this.node;
@@ -20,26 +21,32 @@ export class LineGraphicsDrawer extends BasePIXIDrawer {
         } = this.chart.range;
 
         const {
-            dataProvider
+            dataProvider,
+            viewport
         } = this.chart;
+
+        const style = this.getParsedStyle();
 
         node.clear();
 
-        const width = 300;
-        const height = 200;
+        const width = viewport.width;
+        const height = viewport.height - 30;
 
         const data = dataProvider.fetch() as Array<number>;
         const max = Math.max(...data);
         const min = Math.min(...data);
         const step = width / data.length;
 
-        node.lineStyle({
-            width:2, color: 0xff0000
-        });
+        node.lineStyle(style.thickness || 2, void 0, style.lineJoint as LINE_JOIN);
+
+        node.tint = rgb2hex(style.stroke as number[]);
+        node.alpha = (<number[]> style.stroke)[3];
+
+        hex2rgb(0xffffff, node.shader.uniforms.uGeomColor);
 
         for (let i = 0; i < data.length; i ++) {
             const x = step * i;
-            const y = height * (data[i] - min) / (max - min);
+            const y = 10 + height - height * (data[i] - min) / (max - min);
 
             if (i === 0) {
                 node.moveTo(x, y);
