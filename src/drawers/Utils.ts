@@ -4,8 +4,13 @@ import parseColor from "color-parse";
 
 const FIELDS = ['fill', 'stroke'];
 
+/**
+ * Convert CSS style color onto array [r, g, b, a]
+ * @param {IChartStyle} style
+ */
 export function parseStyle (style: IChartStyle): IChartStyle {
     const parsed: Record<string, any> = {...style};
+
     for(let key of FIELDS) {
         const orig = (<any>style)[key];
         // default
@@ -31,10 +36,10 @@ export function parseStyle (style: IChartStyle): IChartStyle {
                     color.alpha];
             }
             // maybe array
-        } else if(orig && parsed[key].length !== 4) {
-            parsed[key] = void 0;
+        } else if(orig && orig.length === 4) {
+            parsed[key] = orig;
         }
     }
-    // trap css to NUMBER
+
     return parsed;
 }
