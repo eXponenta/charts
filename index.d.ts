@@ -2,6 +2,7 @@ import { Container } from '@pixi/display';
 import { DisplayObject } from '@pixi/display';
 import { EventEmitter } from '@pixi/utils';
 import { IDestroyOptions } from '@pixi/display';
+import { Rectangle } from '@pixi/math';
 import { Renderer } from '@pixi/core';
 
 declare enum BACKEND_TYPE {
@@ -20,6 +21,7 @@ declare class BaseDrawer {
     constructor(chart: Chart);
     update(): void;
     reset(): void;
+    getParsedStyle(): IChartStyle;
 }
 
 declare class BasePIXIDrawer extends BaseDrawer {
@@ -28,24 +30,27 @@ declare class BasePIXIDrawer extends BaseDrawer {
 }
 
 export declare class Chart extends Container {
-    private readonly options;
+    readonly options: IChartDataOptions;
     name: string;
     readonly range: Range_2;
     readonly chartDrawer: BasePIXIDrawer;
     readonly labelDrawer: BasePIXIDrawer;
     readonly gridDrawer: BasePIXIDrawer;
+    readonly viewport: Rectangle;
     dataProvider: IDataProvider;
     labelProvider: ILabelDataProvider;
     constructor(options: IChartDataOptions);
     private onRangeChanged;
     protected parse(): void;
+    setViewport(x: number, y: number, width: number, height: number): void;
     destroy(_options?: IDestroyOptions | boolean): void;
     private _emitUpdate;
 }
 
 export declare enum CHART_EVENTS {
     UPDATE = "chart:update",
-    DESTROY = "chart:destroy"
+    DESTROY = "chart:destroy",
+    RESIZE = "chart:resize"
 }
 
 export declare enum CHART_TYPE {
@@ -57,7 +62,12 @@ export declare enum CHART_TYPE {
 export declare class ChartApp {
     readonly renderer: Renderer;
     readonly stage: Container;
+    readonly size: {
+        width: number;
+        height: number;
+    };
     constructor(canvasOrId: HTMLCanvasElement | string);
+    private onDimensionUpdate;
     private onChartUpdate;
     addChart(chart: Chart, name?: string): Chart;
     removeChart(name: string): Chart;
@@ -74,6 +84,14 @@ export declare interface IChartDataOptions {
     type: CHART_TYPE;
     labels?: ILabelData | ILabelDataProvider;
     data: IDataSetModel | IDataProvider | IData;
+    style?: IChartStyle;
+}
+
+export declare interface IChartStyle {
+    fill?: number | string | [number, number, number, number];
+    stroke?: number | string | [number, number, number, number];
+    thickness?: number;
+    lineJoint?: string;
 }
 
 export declare type IData = IArrayData | IArrayChainData | IObjectData;
