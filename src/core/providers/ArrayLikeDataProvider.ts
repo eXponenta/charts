@@ -1,4 +1,4 @@
-import {IData, IDataProvider} from "./Chart";
+import {IData, IDataProvider} from "../Chart";
 
 export class ArrayLikeDataProvider implements IDataProvider {
     constructor(public data: IData) {}

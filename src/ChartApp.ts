@@ -2,8 +2,7 @@ import { Renderer, BatchRenderer } from "@pixi/core";
 import { InteractionManager } from "@pixi/interaction";
 import { Container } from "@pixi/display";
 
-import { Chart} from "./core/Chart";
-import { CHART_EVENTS } from "./core/CHART_EVENTS";
+import { Chart, CHART_EVENTS } from "./core";
 
 Renderer.registerPlugin('batch', BatchRenderer);
 Renderer.registerPlugin('interaction', InteractionManager);

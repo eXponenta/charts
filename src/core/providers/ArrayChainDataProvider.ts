@@ -1,4 +1,4 @@
-import {IArrayChainData, IData, IDataProvider} from "./Chart";
+import { IArrayChainData, IData, IDataProvider } from "../Chart";
 
 export class ArrayChainDataProvider implements IDataProvider {
     private _externalData: Array<any> = [];

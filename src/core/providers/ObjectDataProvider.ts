@@ -1,4 +1,4 @@
-import {IObjectData} from "./Chart";
+import {IObjectData} from "../Chart";
 import {ArrayChainDataProvider} from "./ArrayChainDataProvider";
 
 export class ObjectDataProvider extends ArrayChainDataProvider {

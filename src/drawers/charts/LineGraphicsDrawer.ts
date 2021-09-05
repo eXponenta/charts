@@ -1,9 +1,11 @@
-import {hex2rgb, rgb2hex} from "@pixi/utils";
-import { BasePIXIDrawer } from "../BasePIXIDrawer";
-import { CHART_TYPE } from "../../core/CHART_TYPE";
+import { hex2rgb, rgb2hex } from "@pixi/utils";
+import { LINE_JOIN } from "@pixi/graphics";
+
 import { TARGET_TYPE } from "../../core/TARGET_TYPE";
+import { CHART_TYPE } from "../../core/CHART_TYPE";
+
+import { BasePIXIDrawer } from "../BasePIXIDrawer";
 import { Plot } from "../../../pixi-candles/src";
-import {LINE_JOIN} from "@pixi/graphics";
 
 export class LineGraphicsDrawer extends BasePIXIDrawer {
     public static readonly CHART_TYPE = CHART_TYPE.LINE;

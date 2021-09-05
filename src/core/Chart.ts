@@ -1,15 +1,20 @@
-import {Container, IDestroyOptions} from "@pixi/display";
-import {Range} from "./Range";
-import {Observable} from "./Observable";
-import {ArrayChainDataProvider} from "./ArrayChainDataProvider";
-import {ObjectDataProvider} from "./ObjectDataProvider";
-import {ArrayLikeDataProvider} from "./ArrayLikeDataProvider";
-import {LineGraphicsDrawer} from "../drawers/charts/LineGraphicsDrawer";
-import {BasePIXIDrawer} from "../drawers/BasePIXIDrawer";
-import {CHART_EVENTS} from "./CHART_EVENTS";
-import {CHART_TYPE} from "./CHART_TYPE";
-import {Rectangle} from "@pixi/math";
-import {LINE_JOIN} from "@pixi/graphics";
+import { Rectangle } from "@pixi/math";
+import { LINE_JOIN } from "@pixi/graphics";
+import { Container, IDestroyOptions } from "@pixi/display";
+
+import { Range } from "./Range";
+import { Observable } from "./Observable";
+import type { BasePIXIDrawer } from "../drawers/BasePIXIDrawer";
+import { LineGraphicsDrawer } from "../drawers/charts";
+import { CHART_EVENTS } from "./CHART_EVENTS";
+import { CHART_TYPE } from "./CHART_TYPE";
+
+import {
+    ArrayChainDataProvider,
+    ArrayLikeDataProvider,
+    ObjectDataProvider
+} from "./providers";
+
 
 export type ILabelData = Array<string | Date | number>;
 export type IArrayData = ArrayLike<number>;

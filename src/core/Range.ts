@@ -1,4 +1,4 @@
-import {Observable} from "./Observable";
+import { Observable } from "./Observable";
 
 export interface IRangeObject {
     fromX?: number;
