@@ -67,7 +67,7 @@ function validate(options: IChartDataOptions): IChartDataOptions {
 
     // validate joints
     const joint = result.style.lineJoint;
-    result.style.lineJoint = joint && (result.style.lineJoint in LINE_JOIN)
+    result.style.lineJoint = joint && Object.values<string>(LINE_JOIN).includes((result.style.lineJoint))
             ? joint
             : LINE_JOIN.BEVEL;
 
