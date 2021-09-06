@@ -25,8 +25,27 @@ export class BaseDrawer {
     constructor (
         public readonly chart: Chart
     ) {
+        this.link();
+    }
+
+    /**
+     * Link for watching a chart upadtes
+     * @protected
+     */
+    public link() {
+        this.unlink();
+
         this.chart.on(CHART_EVENTS.UPDATE, this.update, this);
         this.chart.on(CHART_EVENTS.DESTROY, this.reset, this);
+    }
+    /**
+     * Unlink from chart updates watchings
+     * @protected
+     */
+
+    public unlink() {
+        this.chart.off(CHART_EVENTS.UPDATE, this.update, this);
+        this.chart.off(CHART_EVENTS.DESTROY, this.reset, this);
     }
 
     public update() {
@@ -36,6 +55,7 @@ export class BaseDrawer {
     public reset() {
 
     }
+
 
     public getParsedStyle(): IChartStyle {
         return parseStyle(this.chart.options.style);

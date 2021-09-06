@@ -1,19 +1,17 @@
-import { Rectangle } from "@pixi/math";
-import { LINE_JOIN } from "@pixi/graphics";
-import { Container, IDestroyOptions } from "@pixi/display";
+import {Rectangle} from "@pixi/math";
+import {LINE_JOIN} from "@pixi/graphics";
+import {Container, IDestroyOptions} from "@pixi/display";
 
-import { Range } from "./Range";
-import { Observable } from "./Observable";
-import type { BasePIXIDrawer } from "../drawers/BasePIXIDrawer";
-import { LineGraphicsDrawer } from "../drawers/charts";
-import { CHART_EVENTS } from "./CHART_EVENTS";
-import { CHART_TYPE } from "./CHART_TYPE";
+import {Range} from "./Range";
+import {Observable} from "./Observable";
+import type {BasePIXIDrawer} from "../drawers/";
+import {BaseDrawer} from "../drawers/";
+import {CHART_EVENTS} from "./CHART_EVENTS";
+import {CHART_TYPE} from "./CHART_TYPE";
 
-import {
-    ArrayChainDataProvider,
-    ArrayLikeDataProvider,
-    ObjectDataProvider
-} from "./providers";
+import {ArrayChainDataProvider, ArrayLikeDataProvider, ObjectDataProvider} from "./providers";
+import {AreaDrawer} from "../drawers/charts/AreaDrawer";
+import {LineDrawer} from "../drawers/charts";
 
 
 export type ILabelData = Array<string | Date | number>;
@@ -56,6 +54,14 @@ export interface IChartDataOptions {
     style?: IChartStyle;
 }
 
+function isValidEnum(prop: string, enumType: Record<string, any>): boolean {
+    if (!prop) {
+        return false;
+    }
+
+    return Object.values<string>(enumType).includes(prop);
+}
+
 function validate(options: IChartDataOptions): IChartDataOptions {
     const result = {...options};
 
@@ -65,16 +71,23 @@ function validate(options: IChartDataOptions): IChartDataOptions {
 
     result.style =  {...DEFAULT_STYLE, ...(options.style) || {}};
 
+    // validate type
+    result.type = isValidEnum(options.type, CHART_TYPE) ? options.type : CHART_TYPE.LINE;
+
     // validate joints
     const joint = result.style.lineJoint;
-    result.style.lineJoint = joint && Object.values<string>(LINE_JOIN).includes((result.style.lineJoint))
-            ? joint
-            : LINE_JOIN.BEVEL;
+    result.style.lineJoint = isValidEnum(joint, LINE_JOIN) ? joint : LINE_JOIN.BEVEL;
 
     return result;
 }
 
 export class Chart extends Container {
+    private static CHART_DRAWERS: Record<CHART_TYPE, typeof BaseDrawer> = {
+        [CHART_TYPE.LINE]: LineDrawer,
+        [CHART_TYPE.BAR]: null,
+        [CHART_TYPE.AREA]: AreaDrawer,
+    }
+
     public name: string = '';
     public readonly range: Range = new Range();
     public readonly chartDrawer: BasePIXIDrawer;
@@ -96,7 +109,13 @@ export class Chart extends Container {
 
         this.range.on(Observable.CHANGE_EVENT, this.onRangeChanged);
 
-        this.chartDrawer = new LineGraphicsDrawer(this);
+        const DrawerCtor = Chart.CHART_DRAWERS[this.options.type];
+
+        if (!DrawerCtor) {
+            throw new Error('Unsupported chart type: ' + this.options.type);
+        }
+
+        this.chartDrawer = <BasePIXIDrawer>(new DrawerCtor(this)); //new LineDrawer(this);
 
         const drawers = [
             this.gridDrawer, this.chartDrawer, this.labelDrawer
@@ -106,6 +125,7 @@ export class Chart extends Container {
 
         this.parse();
     }
+
 
     private onRangeChanged (_field: string, _old: any, _newValue: any): void {
         this._emitUpdate();

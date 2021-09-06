@@ -7,7 +7,7 @@ import { CHART_TYPE } from "../../core/CHART_TYPE";
 import { BasePIXIDrawer } from "../BasePIXIDrawer";
 import { Plot } from "../../../pixi-candles/src";
 
-export class LineGraphicsDrawer extends BasePIXIDrawer {
+export class LineDrawer extends BasePIXIDrawer {
     public static readonly CHART_TYPE = CHART_TYPE.LINE;
     public static readonly TARGET_TYPE = TARGET_TYPE.CHART;
 
@@ -16,7 +16,11 @@ export class LineGraphicsDrawer extends BasePIXIDrawer {
 
     public readonly node: Plot = new Plot(null);
 
-    public update() {
+    /**
+     *
+     * @param force - Update any case, no check a alpha === 0
+     */
+    public update(force = false) {
         const node = this.node;
         const {
             fromX, toX
@@ -29,15 +33,20 @@ export class LineGraphicsDrawer extends BasePIXIDrawer {
 
         const style = this.getParsedStyle();
 
+        if (!force && (<number[]>style.stroke)[3] === 0) {
+            node.alpha = 0;
+            return;
+        }
+
         node.clear();
 
         const width = viewport.width;
-        const height = viewport.height - 30;
+        const height = viewport.height;
 
         const data = dataProvider.fetch() as Array<number>;
         const max = Math.max(...data);
         const min = Math.min(...data);
-        const step = width / data.length;
+        const step = width / (data.length - 1);
 
         node.lineStyle(style.thickness || 2, void 0, style.lineJoint as LINE_JOIN);
 
@@ -48,7 +57,7 @@ export class LineGraphicsDrawer extends BasePIXIDrawer {
 
         for (let i = 0; i < data.length; i ++) {
             const x = step * i;
-            const y = 10 + height - height * (data[i] - min) / (max - min);
+            const y = height - height * (data[i] - min) / (max - min);
 
             if (i === 0) {
                 node.moveTo(x, y);
