@@ -15,6 +15,7 @@ import { LineDrawer} from "../drawers/charts";
 import { TransformedProvider} from "./providers/TransformedProvider";
 import { InteractionEvent} from "@pixi/interaction";
 import {GridDrawer} from "../drawers/grid/GridDrawer";
+import {LabelsDrawer} from "../drawers/grid/LabelsDrawer";
 
 export type ILabelData = Array<string | Date | number>;
 export type IArrayData = ArrayLike<number>;
@@ -135,7 +136,7 @@ export class Chart extends Container {
 
         this.chartDrawer = <BasePIXIDrawer>(new DrawerCtor(this));
         this.gridDrawer = new GridDrawer(this);
-
+        this.labelDrawer = new LabelsDrawer(this);
 
         const drawers = [
             this.gridDrawer, this.chartDrawer, this.labelDrawer

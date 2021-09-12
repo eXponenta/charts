@@ -4,12 +4,12 @@
     canvas {
         box-sizing: border-box;
         width: 100%;
-        height: 200px;
+        height: 400px;
 
         border: 2px solid;
     }
 </style>
-<canvas width="300" height="200" id="chart"></canvas>
+<canvas width="300" height="400" id="chart"></canvas>
 
 <script>
     const random = Array.from({length: 100}, e => Math.random());
@@ -22,8 +22,8 @@
         style: {
             stroke: "rgba(255, 0, 0, 1)",
             fill: "#00cc00",
-            thickness: 2,
-            lineJoint: 'miter',
+            thickness: 4,
+            lineJoint: 'round',
         }
     });
 
