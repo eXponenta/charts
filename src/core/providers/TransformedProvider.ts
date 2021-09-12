@@ -3,13 +3,12 @@ import { Range } from "../Range";
 import { Observable } from "../Observable";
 
 export class TransformedProvider implements IDataProvider {
-    public readonly range: Range = new Range({
-        fromX: 0, toX: 1, fromY: 0, toY: 1
-    });
     private _updateId: number = 0;
 
     constructor(
-        public sourceProvider: IDataProvider
+        public sourceProvider: IDataProvider,
+        public readonly range: Range = new Range(),
+        public readonly limits: Range = new Range(),
     ) {
         this.range.on(Observable.CHANGE_EVENT, this.onChange);
     }
@@ -37,16 +36,18 @@ export class TransformedProvider implements IDataProvider {
         const sx = width / dw;
         const sy = height / dh;
 
-        result.data = result.data.map((v, i) => {
-            return [
-                fromX + v[0] * sx, fromY + v[1] * sy
-            ]
-        });
-
         b.fromX += fromX;
         b.fromY += fromY;
         b.toX = fromX + width;
         b.toY = fromY + height;
+
+        result.data = result.data.map((v, i) => {
+            return [
+                fromX + v[0] * sx,
+                height - (fromY + v[1] * sy) // flip
+            ]
+        });
+
 
         return result;
     }

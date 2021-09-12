@@ -8,10 +8,10 @@ export interface IRangeObject {
 }
 
 export class Range extends Observable<IRangeObject> {
-    private _fromX: number;
-    private _toX: number;
-    private _fromY: number;
-    private _toY: number;
+    private _fromX: number = 0;
+    private _toX: number = 0;
+    private _fromY: number = 0;
+    private _toY: number = 0;
 
     public fromX: number;
     public fromY: number;
@@ -48,11 +48,18 @@ export class Range extends Observable<IRangeObject> {
     public scale(x: number, y: number): void {
         this.suspended = true;
 
+        /*
         const w = x * (this._toX - this._fromX);
         const h = y * (this._toY - this._fromY);
 
         this.toX = this._fromX + w;
         this.toY = this._fromY + h;
+        */
+
+        this.toX *= x;
+        this.toY *= y;
+        this.fromX *= x;
+        this.fromY *= y;
 
         this.suspended = false;
     }

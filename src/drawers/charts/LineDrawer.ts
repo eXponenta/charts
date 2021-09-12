@@ -60,8 +60,8 @@ export class LineDrawer extends BasePIXIDrawer {
         hex2rgb(0xffffff, node.shader.uniforms.uGeomColor);
 
         for (let i = 0; i < data.length; i ++) {
-            const x = data[i][0];// * width / dataWidth;
-            const y = dataHeight - data[i][1];// * height / dataHeight; // flip
+            const x = data[i][0];
+            const y = data[i][1];
 
             if (i === 0) {
                 node.moveTo(x, y);

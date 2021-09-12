@@ -97,16 +97,23 @@ export class Chart extends Container {
     }
 
     public name: string = '';
-    public readonly range: Range = new Range();
     public readonly chartDrawer: BasePIXIDrawer;
     public readonly labelDrawer: BasePIXIDrawer;
     public readonly gridDrawer: BasePIXIDrawer;
     public readonly viewport: Rectangle = new Rectangle();
 
+    public readonly range: Range = new Range();
+    public readonly limits: Range = new Range();
+
+
     public dataProvider: TransformedProvider;
     public labelProvider: TransformedProvider;
 
+    private _lastPressedMousePoint: Point;
     private _lastMousePoint: Point;
+
+    private _rangeScale: Point = new Point(1, 1);
+    private _rangeTranslate: Point = new Point(0,0);
 
     constructor (
         public readonly options: IChartDataOptions
@@ -135,37 +142,58 @@ export class Chart extends Container {
 
         this.parse();
 
-
-        document.addEventListener('wheel', e => {
-            this.dataProvider.range.scale(e.deltaY > 0 ? 1.1 : 0.9, 1);
-            this._emitUpdate();
-        });
-
         this.interactive = true;
         this.interactiveChildren = false;
 
         this.on('mousemove', this.onDrag);
+        document.addEventListener('wheel', this.onWheel.bind(this));
+
+    }
+
+    private transformRange() {
+        this.range.suspended = true;
+        this.range.set(this.limits);
+        this.range.scale(this._rangeScale.x, this._rangeScale.y);
+        this.range.translate(this._rangeTranslate.x, this._rangeTranslate.y);
+        this.range.suspended = false;
+    }
+
+    private onWheel(event: WheelEvent): void {
+        const scaleX = event.deltaY > 0 ? 1.1 : 0.9;
+        const scaleY = 1;
+
+        const pos = this._lastMousePoint;
+
+        const dx = this._rangeTranslate.x - pos.x;
+        const dy = this._rangeTranslate.y - pos.y;
+
+        this._rangeTranslate.x -= (1 - scaleX) * dx;
+        this._rangeTranslate.y -= (1 - scaleY) * dy;
+
+        this._rangeScale.x *= scaleX;
+        this._rangeScale.y *= scaleY;
+
+        this.transformRange();
+
     }
 
     private onDrag(event: InteractionEvent): void {
         const original = event.data.originalEvent as MouseEvent;
-
-        this.buttonMode = false;
+        this._lastMousePoint = event.data.global.clone();
 
         if (original.buttons & 0x1) {
-            this.buttonMode = true;
 
-            if (this._lastMousePoint) {
-                const dx = event.data.global.x - this._lastMousePoint.x;
-                const dy = event.data.global.y - this._lastMousePoint.y;
+            if (this._lastPressedMousePoint) {
+                this._rangeTranslate.x += event.data.global.x - this._lastPressedMousePoint.x;
+                this._rangeTranslate.y -= event.data.global.y - this._lastPressedMousePoint.y;
 
-                this.dataProvider.range.translate(dx, -dy);
+                this.transformRange();
                 this._emitUpdate();
             }
 
-            this._lastMousePoint = event.data.global.clone();
+            this._lastPressedMousePoint = event.data.global.clone();
         } else {
-            this._lastMousePoint = null;
+            this._lastPressedMousePoint = null;
         }
     }
 
@@ -177,14 +205,16 @@ export class Chart extends Container {
         const data = this.options.data;
         const labels = this.options.labels;
 
+        let dataProvider: IDataProvider;
+        let labelProvider: ILabelDataProvider;
+
         let primitiveData: IData;
 
         // parse data source
         if ('data' in data) {
             if ('fetch' in data) {
-                this.dataProvider = new TransformedProvider(data);
-                this.labelProvider = new TransformedProvider(labels as any);
-                return;
+                dataProvider = data;
+                labelProvider = labels as any;
             } else {
                 primitiveData = data.data;
             }
@@ -192,29 +222,31 @@ export class Chart extends Container {
             primitiveData = data as IData;
         }
 
-        const firstEntry = primitiveData[0];
+        if (!dataProvider) {
+            const firstEntry = primitiveData[0];
 
-        // array like
-        if (Array.isArray(firstEntry) && firstEntry.length === 2) {
-            this.dataProvider = new TransformedProvider(new ArrayChainDataProvider(primitiveData, false));
-            this.labelProvider = new TransformedProvider(new ArrayChainDataProvider(primitiveData, true)) as any;
-            return;
+            // array like
+            if (Array.isArray(firstEntry) && firstEntry.length === 2) {
+                dataProvider = new ArrayChainDataProvider(primitiveData, false);
+                labelProvider = new ArrayChainDataProvider(primitiveData, true) as any;
+
+            } else if (typeof firstEntry === 'object' && ('x' in <any>firstEntry) && ('y' in <any>firstEntry)) {
+                // object like
+
+                dataProvider = new ObjectDataProvider(primitiveData, false);
+                labelProvider = new ObjectDataProvider(primitiveData, true) as any;
+            } else {
+
+                // is array
+                dataProvider = new ArrayLikeDataProvider(primitiveData);
+
+                // TODO Generate a labels when it not present
+                labelProvider = new ArrayLikeDataProvider(labels as IArrayData, true) as any;
+            }
         }
 
-        // object like
-        if (typeof firstEntry === 'object' && ('x' in <any>firstEntry) && ('y' in <any>firstEntry)) {
-            this.dataProvider = new TransformedProvider(new ObjectDataProvider(primitiveData, false));
-            this.labelProvider = new TransformedProvider(new ObjectDataProvider(primitiveData, true)) as any;
-            return;
-        }
-
-        // is array
-
-        this.dataProvider = new TransformedProvider(new ArrayLikeDataProvider(primitiveData));
-        // TODO
-        // Generate a labels when it not present
-        this.labelProvider = new TransformedProvider(new ArrayLikeDataProvider(labels as IArrayData, true)) as any;
-
+        this.dataProvider = new TransformedProvider(dataProvider, this.range);
+        this.labelProvider =new TransformedProvider(labelProvider as any, this.range) as any;
 
         this._emitUpdate();
     }
@@ -226,12 +258,11 @@ export class Chart extends Container {
         this.viewport.height = height;
         this.hitArea = this.viewport;
 
-        const rangeData = {
+        this.limits.set({
             fromX: x, fromY: y, toX: x + width, toY: y + height
-        };
+        });
 
-        this.dataProvider.range.set(rangeData);
-        this.labelProvider.range.set(rangeData);
+        this.transformRange();
 
         this.emit(CHART_EVENTS.RESIZE, this);
         this._emitUpdate();
