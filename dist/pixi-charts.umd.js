@@ -1,8 +1,8 @@
 /* eslint-disable */
  
 /*!
- * @pixi/charts - v0.1.3
- * Compiled Sun, 05 Sep 2021 12:32:27 UTC
+ * @pixi/charts - v0.1.5
+ * Compiled Sun, 12 Sep 2021 10:42:41 UTC
  *
  * @pixi/charts is licensed under the MIT License.
  * http://www.opensource.org/licenses/mit-license
@@ -12,2198 +12,10 @@
 this.PIXI = this.PIXI || {};
 this.PIXI.charts = this.PIXI.charts || {};
 (function (global, factory) {
-    typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('@pixi/display'), require('@pixi/utils'), require('@pixi/core'), require('@pixi/mesh'), require('@pixi/constants'), require('@pixi/graphics'), require('@pixi/math')) :
-    typeof define === 'function' && define.amd ? define(['exports', '@pixi/display', '@pixi/utils', '@pixi/core', '@pixi/mesh', '@pixi/constants', '@pixi/graphics', '@pixi/math'], factory) :
-    (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global._pixi_charts = {}, global.PIXI, global.PIXI.utils, global.PIXI, global.PIXI, global.PIXI, global.PIXI, global.PIXI));
-}(this, (function (exports, display, utils, core, mesh, constants, graphics, math) { 'use strict';
-
-    class Observable extends utils.EventEmitter {
-         static __initStatic() {this.CHANGE_EVENT = 'change';}
-         __init() {this._dirtyId = 0;}
-
-        constructor (fields) {
-            super();Observable.prototype.__init.call(this);Observable.prototype.__init2.call(this);Observable.prototype.__init3.call(this);;
-
-            if (fields) {
-                this.wrap(fields, this);
-            }
-        }
-
-
-         _broadcast (name, oldValue, newValue) {
-            if (this._suspended) {
-                return;
-            }
-
-            this.emit(Observable.CHANGE_EVENT, {
-                target: this,
-                name,
-                oldValue,
-                newValue
-            });
-        }
-
-         __init2() {this._suspended = false;}
-         __init3() {this._dirtyBeforeSuspend = 0;}
-
-        /**
-         * Suspend and not emit change events while suspended
-         * @protected
-         */
-         set suspended(v) {
-            if (v === this._suspended) {
-                return;
-            }
-
-            if (v) {
-                this._dirtyBeforeSuspend = this._dirtyId;
-                this._suspended = true;
-            } else {
-                this._suspended = false;
-
-                if (this._dirtyId !== this._dirtyBeforeSuspend) {
-                    this._broadcast();
-                }
-
-                this._dirtyBeforeSuspend = -1;
-            }
-        }
-
-         get suspended () {
-            return this._suspended;
-        }
-
-         dirtyId () {
-            return this._dirtyId;
-        }
-
-         wrap  (fields, target) {
-            target = target ;
-
-            for (const key of fields) {
-                Object.defineProperty(target, key, {
-                    set (v) {
-                        const old = this['_' + key];
-                        this['_' + key] = v;
-
-                        if (old !== v) {
-                            target._dirtyId ++;
-                            target._broadcast (key, old, v);
-                        }
-                    },
-
-                    get () {
-                        return this['_' + key];
-                    }
-                });
-            }
-
-            return target;
-        }
-    } Observable.__initStatic();
-
-    class Range extends Observable {
-        
-        
-        
-        
-
-        
-        
-        
-        
-
-        constructor (data = {}) {
-            super([
-                'fromX', 'fromY', 'toX', 'toY'
-            ]);
-
-            data && this.set(data);
-        }
-
-         set ({ fromX = this._fromX, fromY = this._fromY, toX = this._toX, toY = this._toY } = {}) {
-            this.suspended = true;
-
-            this.fromX = fromX;
-            this.fromY = fromY;
-            this.toX = toX;
-            this.toY = toY;
-
-            this.suspended = false;
-        }
-    }
-
-    class ArrayChainDataProvider  {
-         __init() {this._externalData = [];}
-
-        constructor (
-             data,
-              label = false,
-        ) {;this.data = data;this.label = label;ArrayChainDataProvider.prototype.__init.call(this);}
-
-         _fetchValueInternal (index) {
-            const chain = this.data ;
-            const entry = chain[index];
-
-            return this.label ? entry[0] : entry[1];
-        }
-
-        fetch(from = 0, to) {
-            const chain = this.data ;
-
-            to = to || (chain.length - 1);
-            to = Math.min(chain.length - 1, Math.max(from, to));
-
-            if (from === 0 && to === this._externalData.length) {
-                return this._externalData;
-            }
-
-            this._externalData.length = to - from;
-
-            for (let i = 0; i < from - to; i ++) {
-                this._externalData[i] = this._fetchValueInternal(i);
-            }
-
-            return this._externalData;
-        }
-    }
-
-    class ObjectDataProvider extends ArrayChainDataProvider {
-    	 _fetchValueInternal(index) {
-    		const chain = this.data ;
-    		const entry = chain[index];
-
-    		return this.label ? entry.x : entry.y;
-    	}
-    }
-
-    class ArrayLikeDataProvider  {
-        constructor( data) {;this.data = data;}
-
-        fetch(from = 0, to = this.data.length - 1) {
-            const arrayLike = this.data ;
-
-            to = to || (arrayLike.length - 1);
-            to = Math.min(arrayLike.length - 1, Math.max(from, to));
-
-            if (from === 0 && to === arrayLike.length - 1) {
-                return arrayLike;
-            }
-
-            return arrayLike.slice(from, to);
-        }
-    }
-
-    exports.CHART_TYPE = void 0; (function (CHART_TYPE) {
-        const BAR = 'bar'; CHART_TYPE["BAR"] = BAR;
-        const LINE = 'line'; CHART_TYPE["LINE"] = LINE;
-        const FILL = 'area'; CHART_TYPE["FILL"] = FILL;
-    })(exports.CHART_TYPE || (exports.CHART_TYPE = {}));
-
-    var TARGET_TYPE; (function (TARGET_TYPE) {
-    	const NONE = 'none'; TARGET_TYPE["NONE"] = NONE;
-    	const CHART = 'chart'; TARGET_TYPE["CHART"] = CHART;
-    	const LABELS = 'labels'; TARGET_TYPE["LABELS"] = LABELS;
-    	const GRID = 'grid'; TARGET_TYPE["GRID"] = GRID;
-    })(TARGET_TYPE || (TARGET_TYPE = {}));
-
-    var BACKEND_TYPE; (function (BACKEND_TYPE) {
-    	const NONE = 'none'; BACKEND_TYPE["NONE"] = NONE;
-    	const PIXI = 'pixi'; BACKEND_TYPE["PIXI"] = PIXI;
-    })(BACKEND_TYPE || (BACKEND_TYPE = {}));
-
-    exports.CHART_EVENTS = void 0; (function (CHART_EVENTS) {
-    	const UPDATE = 'chart:update'; CHART_EVENTS["UPDATE"] = UPDATE;
-    	const DESTROY = 'chart:destroy'; CHART_EVENTS["DESTROY"] = DESTROY;
-        const RESIZE = 'chart:resize'; CHART_EVENTS["RESIZE"] = RESIZE;
-    })(exports.CHART_EVENTS || (exports.CHART_EVENTS = {}));
-
-    'use strict';
-
-    var colorName = {
-    	"aliceblue": [240, 248, 255],
-    	"antiquewhite": [250, 235, 215],
-    	"aqua": [0, 255, 255],
-    	"aquamarine": [127, 255, 212],
-    	"azure": [240, 255, 255],
-    	"beige": [245, 245, 220],
-    	"bisque": [255, 228, 196],
-    	"black": [0, 0, 0],
-    	"blanchedalmond": [255, 235, 205],
-    	"blue": [0, 0, 255],
-    	"blueviolet": [138, 43, 226],
-    	"brown": [165, 42, 42],
-    	"burlywood": [222, 184, 135],
-    	"cadetblue": [95, 158, 160],
-    	"chartreuse": [127, 255, 0],
-    	"chocolate": [210, 105, 30],
-    	"coral": [255, 127, 80],
-    	"cornflowerblue": [100, 149, 237],
-    	"cornsilk": [255, 248, 220],
-    	"crimson": [220, 20, 60],
-    	"cyan": [0, 255, 255],
-    	"darkblue": [0, 0, 139],
-    	"darkcyan": [0, 139, 139],
-    	"darkgoldenrod": [184, 134, 11],
-    	"darkgray": [169, 169, 169],
-    	"darkgreen": [0, 100, 0],
-    	"darkgrey": [169, 169, 169],
-    	"darkkhaki": [189, 183, 107],
-    	"darkmagenta": [139, 0, 139],
-    	"darkolivegreen": [85, 107, 47],
-    	"darkorange": [255, 140, 0],
-    	"darkorchid": [153, 50, 204],
-    	"darkred": [139, 0, 0],
-    	"darksalmon": [233, 150, 122],
-    	"darkseagreen": [143, 188, 143],
-    	"darkslateblue": [72, 61, 139],
-    	"darkslategray": [47, 79, 79],
-    	"darkslategrey": [47, 79, 79],
-    	"darkturquoise": [0, 206, 209],
-    	"darkviolet": [148, 0, 211],
-    	"deeppink": [255, 20, 147],
-    	"deepskyblue": [0, 191, 255],
-    	"dimgray": [105, 105, 105],
-    	"dimgrey": [105, 105, 105],
-    	"dodgerblue": [30, 144, 255],
-    	"firebrick": [178, 34, 34],
-    	"floralwhite": [255, 250, 240],
-    	"forestgreen": [34, 139, 34],
-    	"fuchsia": [255, 0, 255],
-    	"gainsboro": [220, 220, 220],
-    	"ghostwhite": [248, 248, 255],
-    	"gold": [255, 215, 0],
-    	"goldenrod": [218, 165, 32],
-    	"gray": [128, 128, 128],
-    	"green": [0, 128, 0],
-    	"greenyellow": [173, 255, 47],
-    	"grey": [128, 128, 128],
-    	"honeydew": [240, 255, 240],
-    	"hotpink": [255, 105, 180],
-    	"indianred": [205, 92, 92],
-    	"indigo": [75, 0, 130],
-    	"ivory": [255, 255, 240],
-    	"khaki": [240, 230, 140],
-    	"lavender": [230, 230, 250],
-    	"lavenderblush": [255, 240, 245],
-    	"lawngreen": [124, 252, 0],
-    	"lemonchiffon": [255, 250, 205],
-    	"lightblue": [173, 216, 230],
-    	"lightcoral": [240, 128, 128],
-    	"lightcyan": [224, 255, 255],
-    	"lightgoldenrodyellow": [250, 250, 210],
-    	"lightgray": [211, 211, 211],
-    	"lightgreen": [144, 238, 144],
-    	"lightgrey": [211, 211, 211],
-    	"lightpink": [255, 182, 193],
-    	"lightsalmon": [255, 160, 122],
-    	"lightseagreen": [32, 178, 170],
-    	"lightskyblue": [135, 206, 250],
-    	"lightslategray": [119, 136, 153],
-    	"lightslategrey": [119, 136, 153],
-    	"lightsteelblue": [176, 196, 222],
-    	"lightyellow": [255, 255, 224],
-    	"lime": [0, 255, 0],
-    	"limegreen": [50, 205, 50],
-    	"linen": [250, 240, 230],
-    	"magenta": [255, 0, 255],
-    	"maroon": [128, 0, 0],
-    	"mediumaquamarine": [102, 205, 170],
-    	"mediumblue": [0, 0, 205],
-    	"mediumorchid": [186, 85, 211],
-    	"mediumpurple": [147, 112, 219],
-    	"mediumseagreen": [60, 179, 113],
-    	"mediumslateblue": [123, 104, 238],
-    	"mediumspringgreen": [0, 250, 154],
-    	"mediumturquoise": [72, 209, 204],
-    	"mediumvioletred": [199, 21, 133],
-    	"midnightblue": [25, 25, 112],
-    	"mintcream": [245, 255, 250],
-    	"mistyrose": [255, 228, 225],
-    	"moccasin": [255, 228, 181],
-    	"navajowhite": [255, 222, 173],
-    	"navy": [0, 0, 128],
-    	"oldlace": [253, 245, 230],
-    	"olive": [128, 128, 0],
-    	"olivedrab": [107, 142, 35],
-    	"orange": [255, 165, 0],
-    	"orangered": [255, 69, 0],
-    	"orchid": [218, 112, 214],
-    	"palegoldenrod": [238, 232, 170],
-    	"palegreen": [152, 251, 152],
-    	"paleturquoise": [175, 238, 238],
-    	"palevioletred": [219, 112, 147],
-    	"papayawhip": [255, 239, 213],
-    	"peachpuff": [255, 218, 185],
-    	"peru": [205, 133, 63],
-    	"pink": [255, 192, 203],
-    	"plum": [221, 160, 221],
-    	"powderblue": [176, 224, 230],
-    	"purple": [128, 0, 128],
-    	"rebeccapurple": [102, 51, 153],
-    	"red": [255, 0, 0],
-    	"rosybrown": [188, 143, 143],
-    	"royalblue": [65, 105, 225],
-    	"saddlebrown": [139, 69, 19],
-    	"salmon": [250, 128, 114],
-    	"sandybrown": [244, 164, 96],
-    	"seagreen": [46, 139, 87],
-    	"seashell": [255, 245, 238],
-    	"sienna": [160, 82, 45],
-    	"silver": [192, 192, 192],
-    	"skyblue": [135, 206, 235],
-    	"slateblue": [106, 90, 205],
-    	"slategray": [112, 128, 144],
-    	"slategrey": [112, 128, 144],
-    	"snow": [255, 250, 250],
-    	"springgreen": [0, 255, 127],
-    	"steelblue": [70, 130, 180],
-    	"tan": [210, 180, 140],
-    	"teal": [0, 128, 128],
-    	"thistle": [216, 191, 216],
-    	"tomato": [255, 99, 71],
-    	"turquoise": [64, 224, 208],
-    	"violet": [238, 130, 238],
-    	"wheat": [245, 222, 179],
-    	"white": [255, 255, 255],
-    	"whitesmoke": [245, 245, 245],
-    	"yellow": [255, 255, 0],
-    	"yellowgreen": [154, 205, 50]
-    };
-
-    /**
-     * @module color-parse
-     */
-
-    'use strict';
-
-
-
-    var colorParse = parse;
-
-    /**
-     * Base hues
-     * http://dev.w3.org/csswg/css-color/#typedef-named-hue
-     */
-    //FIXME: use external hue detector
-    var baseHues = {
-    	red: 0,
-    	orange: 60,
-    	yellow: 120,
-    	green: 180,
-    	blue: 240,
-    	purple: 300
-    };
-
-    /**
-     * Parse color from the string passed
-     *
-     * @return {Object} A space indicator `space`, an array `values` and `alpha`
-     */
-    function parse (cstr) {
-    	var m, parts = [], alpha = 1, space;
-
-    	if (typeof cstr === 'string') {
-    		//keyword
-    		if (colorName[cstr]) {
-    			parts = colorName[cstr].slice();
-    			space = 'rgb';
-    		}
-
-    		//reserved words
-    		else if (cstr === 'transparent') {
-    			alpha = 0;
-    			space = 'rgb';
-    			parts = [0,0,0];
-    		}
-
-    		//hex
-    		else if (/^#[A-Fa-f0-9]+$/.test(cstr)) {
-    			var base = cstr.slice(1);
-    			var size = base.length;
-    			var isShort = size <= 4;
-    			alpha = 1;
-
-    			if (isShort) {
-    				parts = [
-    					parseInt(base[0] + base[0], 16),
-    					parseInt(base[1] + base[1], 16),
-    					parseInt(base[2] + base[2], 16)
-    				];
-    				if (size === 4) {
-    					alpha = parseInt(base[3] + base[3], 16) / 255;
-    				}
-    			}
-    			else {
-    				parts = [
-    					parseInt(base[0] + base[1], 16),
-    					parseInt(base[2] + base[3], 16),
-    					parseInt(base[4] + base[5], 16)
-    				];
-    				if (size === 8) {
-    					alpha = parseInt(base[6] + base[7], 16) / 255;
-    				}
-    			}
-
-    			if (!parts[0]) parts[0] = 0;
-    			if (!parts[1]) parts[1] = 0;
-    			if (!parts[2]) parts[2] = 0;
-
-    			space = 'rgb';
-    		}
-
-    		//color space
-    		else if (m = /^((?:rgb|hs[lvb]|hwb|cmyk?|xy[zy]|gray|lab|lchu?v?|[ly]uv|lms)a?)\s*\(([^\)]*)\)/.exec(cstr)) {
-    			var name = m[1];
-    			var isRGB = name === 'rgb';
-    			var base = name.replace(/a$/, '');
-    			space = base;
-    			var size = base === 'cmyk' ? 4 : base === 'gray' ? 1 : 3;
-    			parts = m[2].trim()
-    				.split(/\s*[,\/]\s*|\s+/)
-    				.map(function (x, i) {
-    					//<percentage>
-    					if (/%$/.test(x)) {
-    						//alpha
-    						if (i === size)	return parseFloat(x) / 100
-    						//rgb
-    						if (base === 'rgb') return parseFloat(x) * 255 / 100
-    						return parseFloat(x)
-    					}
-    					//hue
-    					else if (base[i] === 'h') {
-    						//<deg>
-    						if (/deg$/.test(x)) {
-    							return parseFloat(x)
-    						}
-    						//<base-hue>
-    						else if (baseHues[x] !== undefined) {
-    							return baseHues[x]
-    						}
-    					}
-    					return parseFloat(x)
-    				});
-
-    			if (name === base) parts.push(1);
-    			alpha = (isRGB) ? 1 : (parts[size] === undefined) ? 1 : parts[size];
-    			parts = parts.slice(0, size);
-    		}
-
-    		//named channels case
-    		else if (cstr.length > 10 && /[0-9](?:\s|\/)/.test(cstr)) {
-    			parts = cstr.match(/([0-9]+)/g).map(function (value) {
-    				return parseFloat(value)
-    			});
-
-    			space = cstr.match(/([a-z])/ig).join('').toLowerCase();
-    		}
-    	}
-
-    	//numeric case
-    	else if (!isNaN(cstr)) {
-    		space = 'rgb';
-    		parts = [cstr >>> 16, (cstr & 0x00ff00) >>> 8, cstr & 0x0000ff];
-    	}
-
-    	//array-like
-    	else if (Array.isArray(cstr) || cstr.length) {
-    		parts = [cstr[0], cstr[1], cstr[2]];
-    		space = 'rgb';
-    		alpha = cstr.length === 4 ? cstr[3] : 1;
-    	}
-
-    	//object case - detects css cases of rgb and hsl
-    	else if (cstr instanceof Object) {
-    		if (cstr.r != null || cstr.red != null || cstr.R != null) {
-    			space = 'rgb';
-    			parts = [
-    				cstr.r || cstr.red || cstr.R || 0,
-    				cstr.g || cstr.green || cstr.G || 0,
-    				cstr.b || cstr.blue || cstr.B || 0
-    			];
-    		}
-    		else {
-    			space = 'hsl';
-    			parts = [
-    				cstr.h || cstr.hue || cstr.H || 0,
-    				cstr.s || cstr.saturation || cstr.S || 0,
-    				cstr.l || cstr.lightness || cstr.L || cstr.b || cstr.brightness
-    			];
-    		}
-
-    		alpha = cstr.a || cstr.alpha || cstr.opacity || 1;
-
-    		if (cstr.opacity != null) alpha /= 100;
-    	}
-
-    	return {
-    		space: space,
-    		values: parts,
-    		alpha: alpha
-    	}
-    }
-
-    const FIELDS = ['fill', 'stroke'];
-
-    function parseStyle (style) {
-        const parsed = {...style};
-        for(let key of FIELDS) {
-            const orig = (style)[key];
-            // default
-            parsed[key] = [0,0,0,1];
-
-            if (orig == null) {
-                continue;
-            }
-
-            // decode HEX and strings
-            if (typeof orig === "string" || typeof orig === 'number') {
-                const color = colorParse(orig);
-
-                if (color && color.space && color.space.indexOf('rgb') !== 0) {
-                    throw new Error('Unknown style:' + orig);
-                }
-
-                if (color) {
-                    parsed[key] = [
-                        color.values[0] / 0xff,
-                        color.values[1] / 0xff,
-                        color.values[2] / 0xff,
-                        color.alpha];
-                }
-                // maybe array
-            } else if(orig && parsed[key].length !== 4) {
-                parsed[key] = void 0;
-            }
-        }
-        // trap css to NUMBER
-        return parsed;
-    }
-
-    class BaseDrawer {
-         static  __initStatic() {this.BACKEND_TYPE = BACKEND_TYPE.NONE;}
-         static  __initStatic2() {this.TARGET_TYPE = TARGET_TYPE.NONE;}
-         static  __initStatic3() {this.CHART_TYPE = exports.CHART_TYPE.LINE;}
-
-         get backendType() {
-            return  (this.constructor).BACKEND_TYPE;
-        }
-
-         get targetType() {
-            return  (this.constructor).TARGET_TYPE;
-        }
-
-         get chartType() {
-            return  (this.constructor).CHART_TYPE;
-        }
-
-        constructor (
-              chart
-        ) {;this.chart = chart;
-            this.chart.on(exports.CHART_EVENTS.UPDATE, this.update, this);
-            this.chart.on(exports.CHART_EVENTS.DESTROY, this.reset, this);
-        }
-
-         update() {
-
-        }
-
-         reset() {
-
-        }
-
-         getParsedStyle() {
-            return parseStyle(this.chart.options.style);
-        }
-    } BaseDrawer.__initStatic(); BaseDrawer.__initStatic2(); BaseDrawer.__initStatic3();
-
-    class BasePIXIDrawer extends BaseDrawer {
-    	 static  __initStatic() {this.BACKEND_TYPE = BACKEND_TYPE.PIXI;}
-    	
-    } BasePIXIDrawer.__initStatic();
-
-    const barVert = `
-attribute vec4 aRect;
-attribute vec2 aQuad;
-attribute vec4 aColor;
-uniform mat3 projectionMatrix;
-uniform mat3 translationMatrix;
-uniform float resolution;
-uniform vec4 uColor;
-uniform float threshold;
-
-varying vec2 vPos;
-varying vec4 vDistance;
-varying vec4 vColor;
-
-void main(void){
-vec2 p1 = (translationMatrix * vec3(aRect.xy, 1.0)).xy;
-vec2 p2 = (translationMatrix * vec3(aRect.xy + aRect.zw, 1.0)).xy;
-vec2 size = p2 - p1;
-
-vec2 tQuad = (aQuad * 2.0 - 1.0) * threshold;
-vec2 tWorld = tQuad;
-if (size.x < 0.0) {
-    tWorld.x = -tWorld.x;
-}
-if (size.y < 0.0) {
-    tWorld.y = -tWorld.y;
-}
-
-vec2 localPos = (translationMatrix * vec3(aRect.zw * aQuad, 0.0)).xy;
-vec2 cssPos = (p1 + localPos) + tWorld / resolution;
-vDistance.xy = abs(localPos) * resolution + tQuad;
-vDistance.zw = aRect.zw * resolution;
-gl_Position = vec4((projectionMatrix * vec3(cssPos, 1.0)).xy, 0.0, 1.0);
-vColor = aColor * uColor;
-}`;
-    const barFrag = `
-varying vec2 vPos;
-varying vec4 vDistance;
-varying vec4 vColor;
-
-void main(void) {
-vec2 leftTop = max(vDistance.xy - 0.5, 0.0);
-vec2 rightBottom = min(vDistance.xy + 0.5, vDistance.zw);
-vec2 area = max(rightBottom - leftTop, 0.0);
-float clip = area.x * area.y;
-
-gl_FragColor = vColor * clip;
-}`;
-
-    class BarsShader extends mesh.MeshMaterial {
-        static __initStatic() {this._prog = null;}
-
-        static getProgram() {
-            if (!BarsShader._prog) {
-                BarsShader._prog = new core.Program(barVert, barFrag);
-            }
-            return BarsShader._prog;
-        }
-
-        constructor() {
-            super(core.Texture.WHITE, {
-                uniforms: {
-                    resolution: 1,
-                    threshold: 1,
-                },
-                program: BarsShader.getProgram()
-            });
-        }
-    } BarsShader.__initStatic();
-
-    class BarsGeometry extends core.Geometry {
-        constructor(_static = false) {
-            super();BarsGeometry.prototype.__init.call(this);BarsGeometry.prototype.__init2.call(this);BarsGeometry.prototype.__init3.call(this);BarsGeometry.prototype.__init4.call(this);BarsGeometry.prototype.__init5.call(this);BarsGeometry.prototype.__init6.call(this);BarsGeometry.prototype.__init7.call(this);BarsGeometry.prototype.__init8.call(this);BarsGeometry.prototype.__init9.call(this);BarsGeometry.prototype.__init10.call(this);BarsGeometry.prototype.__init11.call(this);BarsGeometry.prototype.__init12.call(this);BarsGeometry.prototype.__init13.call(this);BarsGeometry.prototype.__init14.call(this);;
-            this.initGeom(_static);
-            this.reset();
-        }
-
-        __init() {this.lastLen = 0;}
-        __init2() {this.lastPointNum = 0;}
-        __init3() {this.lastPointData = 0;}
-        __init4() {this.points = [];}
-        __init5() {this._floatView = null;}
-        __init6() {this._u32View = null;}
-        __init7() {this._buffer = null;}
-        __init8() {this._quad = null;}
-        __init9() {this._indexBuffer = null;}
-
-        initGeom(_static) {
-            this._buffer = new core.Buffer(new Float32Array(0), _static, false);
-
-            this._quad = new core.Buffer(new Float32Array([0, 0, 1, 0, 1, 1, 0, 1]), true, false);
-
-            this._indexBuffer = new core.Buffer(new Uint16Array([0, 1, 2, 0, 2, 3]), true, true);
-
-            this.addAttribute('aRect', this._buffer, 4, false, constants.TYPES.FLOAT, undefined, undefined, true)
-                .addAttribute('aColor', this._buffer, 4, true, constants.TYPES.UNSIGNED_BYTE, undefined, undefined, true)
-                .addAttribute('aQuad', this._quad, 2, false, constants.TYPES.FLOAT)
-                .addIndex(this._indexBuffer);
-        }
-
-        __init10() {this.stridePoints = 5;}
-        __init11() {this.strideFloats = 5;}
-        __init12() {this.strideBytes = 20;}
-
-        addRect(x, y, w, h, color) {
-            const {points} = this;
-            points.push(x);
-            points.push(y);
-            points.push(w);
-            points.push(h);
-            points.push(color);
-        }
-
-        invalidate(pointNum = 0) {
-            this.lastPointNum = Math.min(pointNum, this.lastPointNum);
-        }
-
-        reset() {
-            if (this.lastLen > 0) {
-                this.clearBufferData();
-            }
-            this.lastLen = 0;
-            this.lastPointData = 0;
-            this.points.length = 0;
-            this.instanceCount = 0;
-        }
-
-        clearBufferData() {
-            const {points, strideBytes, stridePoints} = this;
-            this.lastPointNum = 0;
-            this.lastPointData = 0;
-            const arrBuf = new ArrayBuffer(strideBytes * points.length / stridePoints);
-            this.lastLen = points.length;
-            this._floatView = new Float32Array(arrBuf);
-            this._u32View = new Uint32Array(arrBuf);
-            this._buffer.update(arrBuf);
-        }
-
-        updateBuffer() {
-            const {points, stridePoints, strideFloats} = this;
-
-            if (this.lastLen > points.length) {
-                this.lastLen = -1;
-            }
-            if (this.lastLen < points.length
-                || this.lastPointNum < this.lastLen) { // TODO: partial upload
-                this.clearBufferData();
-            }
-
-            if (this.lastPointNum == this.lastLen) {
-                return;
-            }
-
-            const {_floatView, _u32View} = this;
-            this.lastPointData = Math.min(this.lastPointData, this.lastPointNum);
-            let j = Math.round(this.lastPointNum * strideFloats / stridePoints); //actually that's int division
-            for (let i = this.lastPointNum; i < points.length; i += stridePoints) {
-                _floatView[j++] = points[i];
-                _floatView[j++] = points[i + 1];
-                _floatView[j++] = points[i + 2];
-                _floatView[j++] = points[i + 3];
-
-                const rgb = points[i + 4];
-                const bgra = ((rgb >> 16) & 0xff) | (rgb & 0xff00) | ((rgb & 0xff) << 16) | (255 << 24);
-                _u32View[j++] = bgra;
-            }
-            this._buffer.update();
-            this.instanceCount = Math.round(points.length / stridePoints);
-
-            this.lastPointNum = this.lastLen;
-            this.lastPointData = this.lastLen; // TODO: partial upload
-
-            if (this.legacyGeom) {
-                this.updateLegacy();
-            }
-        }
-
-        __init13() {this.legacyGeom = null;}
-        __init14() {this.legacyBuffer = null;}
-
-        initLegacy() {
-            if (this.legacyGeom) {
-                return;
-            }
-            this.legacyGeom = new core.Geometry();
-            this.legacyBuffer = new core.Buffer(new Float32Array(0), false, false);
-            this.legacyGeom.addAttribute('aRect', this.legacyBuffer, 4, false, constants.TYPES.FLOAT)
-                .addAttribute('aColor', this.legacyBuffer, 4, true, constants.TYPES.UNSIGNED_BYTE)
-                .addAttribute('aQuad', this.legacyBuffer, 2, false, constants.TYPES.FLOAT)
-                .addIndex(new core.Buffer(new Uint16Array([0, 1, 2, 0, 2, 3]), false, true));
-        }
-
-        updateLegacy() {
-            const {legacyBuffer, _floatView, _u32View, strideFloats} = this;
-            const strideLegacy = 7;
-            const quadsCount = this._floatView.length / strideFloats;
-            const legacyLen = quadsCount * strideLegacy * 4;
-            if ((legacyBuffer.data ).length !== legacyLen) {
-                legacyBuffer.data = new Float32Array(legacyLen);
-                this.legacyGeom.getIndex().update(utils.createIndicesForQuads(quadsCount));
-            }
-            const floats = legacyBuffer.data ;
-            const quad = this._quad.data ;
-
-            for (let i = 0, j = 0; i < this._floatView.length;) {
-                for (let k = 0; k < 4; k++) {
-                    floats[j++] = _floatView[i];
-                    floats[j++] = _floatView[i + 1];
-                    floats[j++] = _floatView[i + 2];
-                    floats[j++] = _floatView[i + 3];
-                    floats[j++] = _floatView[i + 4];
-                    floats[j++] = quad[k * 2];
-                    floats[j++] = quad[k * 2 + 1];
-                }
-                i += strideFloats;
-            }
-            legacyBuffer.update();
-        }
-    }
-
-    class Bars extends mesh.Mesh {
-        constructor() {
-            super(new BarsGeometry(), new BarsShader());
-        }
-
-        addRect(x, y, w, h, color) {
-            const geometry = this.geometry ;
-            geometry.addRect(x, y, w, h, color);
-        }
-
-        clear() {
-            (this.geometry ).reset();
-        }
-
-        _renderDefault(renderer) {
-            const geometry = this.geometry ;
-
-            const useLegacy = !renderer.geometry.hasInstance;
-            if (useLegacy) {
-                geometry.initLegacy();
-            }
-            geometry.updateBuffer();
-            if (geometry.instanceCount === 0) {
-                return;
-            }
-            const rt = renderer.renderTexture.current;
-            this.shader.uniforms.resolution = rt ? rt.baseTexture.resolution : renderer.resolution;
-
-            const multisample = rt ? rt.framebuffer.multisample > 1 : renderer.options.antialias;
-            this.shader.uniforms.threshold = multisample ? 2 : 1;
-
-            if (useLegacy) {
-                // hacky!
-                (this ).geometry = geometry.legacyGeom;
-                super._renderDefault(renderer);
-                (this ).geometry = geometry;
-                return;
-            }
-            super._renderDefault(renderer);
-        }
-
-        _renderCanvas(renderer) {
-            const {points} = this.geometry ;
-            const {context} = renderer;
-
-            renderer.setContextTransform(this.transform.worldTransform);
-
-            context.beginPath();
-            let clr = -1;
-            for (let i = 0; i < points.length; i += 5) {
-                if (clr !== points[i + 4]) {
-                    clr = points[i + 4];
-                    let fill = utils.hex2string(clr);
-                    context.fillStyle = fill;
-                }
-                context.beginPath();
-                context.rect(points[i], points[i + 1], points[i + 2], points[i + 3]);
-                context.fill();
-            }
-            context.beginPath();
-        }
-    }
-
-    var JOINT_TYPE; (function (JOINT_TYPE) {
-        const NONE = 0; JOINT_TYPE[JOINT_TYPE["NONE"] = NONE] = "NONE";
-        const FILL = 1; JOINT_TYPE[JOINT_TYPE["FILL"] = FILL] = "FILL";
-        const JOINT_BEVEL = 4; JOINT_TYPE[JOINT_TYPE["JOINT_BEVEL"] = JOINT_BEVEL] = "JOINT_BEVEL";
-        const JOINT_MITER = 8; JOINT_TYPE[JOINT_TYPE["JOINT_MITER"] = JOINT_MITER] = "JOINT_MITER";
-        const JOINT_ROUND = 12; JOINT_TYPE[JOINT_TYPE["JOINT_ROUND"] = JOINT_ROUND] = "JOINT_ROUND";
-        const JOINT_CAP_BUTT = 16; JOINT_TYPE[JOINT_TYPE["JOINT_CAP_BUTT"] = JOINT_CAP_BUTT] = "JOINT_CAP_BUTT";
-        const JOINT_CAP_SQUARE = 18; JOINT_TYPE[JOINT_TYPE["JOINT_CAP_SQUARE"] = JOINT_CAP_SQUARE] = "JOINT_CAP_SQUARE";
-        const JOINT_CAP_ROUND = 20; JOINT_TYPE[JOINT_TYPE["JOINT_CAP_ROUND"] = JOINT_CAP_ROUND] = "JOINT_CAP_ROUND";
-        const FILL_EXPAND = 24; JOINT_TYPE[JOINT_TYPE["FILL_EXPAND"] = FILL_EXPAND] = "FILL_EXPAND";
-        const CAP_BUTT = 1 << 5; JOINT_TYPE[JOINT_TYPE["CAP_BUTT"] = CAP_BUTT] = "CAP_BUTT";
-        const CAP_SQUARE = 2 << 5; JOINT_TYPE[JOINT_TYPE["CAP_SQUARE"] = CAP_SQUARE] = "CAP_SQUARE";
-        const CAP_ROUND = 3 << 5; JOINT_TYPE[JOINT_TYPE["CAP_ROUND"] = CAP_ROUND] = "CAP_ROUND";
-        const CAP_BUTT2 = 4 << 5; JOINT_TYPE[JOINT_TYPE["CAP_BUTT2"] = CAP_BUTT2] = "CAP_BUTT2";
-    })(JOINT_TYPE || (JOINT_TYPE = {}));
-
-    const plotVert = `precision highp float;
-const float FILL = 1.0;
-const float BEVEL = 4.0;
-const float MITER = 8.0;
-const float ROUND = 12.0;
-const float JOINT_CAP_BUTT = 16.0;
-const float JOINT_CAP_SQUARE = 18.0;
-const float JOINT_CAP_ROUND = 20.0;
-
-const float FILL_EXPAND = 24.0;
-
-const float CAP_BUTT = 1.0;
-const float CAP_SQUARE = 2.0;
-const float CAP_ROUND = 3.0;
-const float CAP_BUTT2 = 4.0;
-
-// === geom ===
-attribute vec2 aPrev;
-attribute vec2 aPoint1;
-attribute vec2 aPoint2;
-attribute vec2 aNext;
-attribute float aVertexJoint;
-attribute float vertexNum;
-
-uniform mat3 projectionMatrix;
-uniform mat3 translationMatrix;
-
-varying vec4 vDistance;
-varying float vType;
-
-uniform float resolution;
-uniform float expand;
-uniform float miterLimit;
-uniform vec2 styleLine;
-
-vec2 doBisect(vec2 norm, float len, vec2 norm2, float len2,
-    float dy, float inner) {
-    vec2 bisect = (norm + norm2) / 2.0;
-    bisect /= dot(norm, bisect);
-    vec2 shift = dy * bisect;
-    if (inner > 0.5) {
-        if (len < len2) {
-            if (abs(dy * (bisect.x * norm.y - bisect.y * norm.x)) > len) {
-                return dy * norm;
-            }
-        } else {
-            if (abs(dy * (bisect.x * norm2.y - bisect.y * norm2.x)) > len2) {
-                return dy * norm;
-            }
-        }
-    }
-    return dy * bisect;
-}
-
-void main(void){
-    vec2 pointA = (translationMatrix * vec3(aPoint1, 1.0)).xy;
-    vec2 pointB = (translationMatrix * vec3(aPoint2, 1.0)).xy;
-
-    vec2 xBasis = pointB - pointA;
-    float len = length(xBasis);
-    vec2 forward = xBasis / len;
-    vec2 norm = vec2(forward.y, -forward.x);
-
-    float type = aVertexJoint;
-
-    vec2 avgDiag = (translationMatrix * vec3(1.0, 1.0, 0.0)).xy;
-    float avgScale = sqrt(dot(avgDiag, avgDiag) * 0.5);
-
-    float capType = floor(type / 32.0);
-    type -= capType * 32.0;
-
-    float lineWidth = styleLine.x;
-    if (lineWidth < 0.0) {
-        lineWidth = -lineWidth;
-    } else {
-        lineWidth = lineWidth * avgScale;
-    }
-    lineWidth *= 0.5;
-    float lineAlignment = 2.0 * styleLine.y - 1.0;
-
-    vec2 pos;
-
-    if (capType == CAP_ROUND) {
-        if (vertexNum < 3.5) {
-            gl_Position = vec4(0.0, 0.0, 0.0, 1.0);
-            return;
-        }
-        type = JOINT_CAP_ROUND;
-        capType = 0.0;
-    }
-
-    if (type >= BEVEL) {
-        float dy = lineWidth + expand;
-        float inner = 0.0;
-        if (vertexNum >= 1.5) {
-            dy = -dy;
-            inner = 1.0;
-        }
-
-        vec2 base, next, xBasis2, bisect;
-        float flag = 0.0;
-        float sign2 = 1.0;
-        if (vertexNum < 0.5 || vertexNum > 2.5 && vertexNum < 3.5) {
-            next = (translationMatrix * vec3(aPrev, 1.0)).xy;
-            base = pointA;
-            flag = type - floor(type / 2.0) * 2.0;
-            sign2 = -1.0;
-        } else {
-            next = (translationMatrix * vec3(aNext, 1.0)).xy;
-            base = pointB;
-            if (type >= MITER && type < MITER + 3.5) {
-                flag = step(MITER + 1.5, type);
-                // check miter limit here?
-            }
-        }
-        xBasis2 = next - base;
-        float len2 = length(xBasis2);
-        vec2 norm2 = vec2(xBasis2.y, -xBasis2.x) / len2;
-        float D = norm.x * norm2.y - norm.y * norm2.x;
-        if (D < 0.0) {
-            inner = 1.0 - inner;
-        }
-
-        norm2 *= sign2;
-
-        if (abs(lineAlignment) > 0.01) {
-            float shift = lineWidth * lineAlignment;
-            pointA += norm * shift;
-            pointB += norm * shift;
-            if (abs(D) < 0.01) {
-                base += norm * shift;
-            } else {
-                base += doBisect(norm, len, norm2, len2, shift, 0.0);
-            }
-        }
-
-        float collinear = step(0.0, dot(norm, norm2));
-
-        vType = 0.0;
-        float dy2 = -1000.0;
-        float dy3 = -1000.0;
-
-        if (abs(D) < 0.01 && collinear < 0.5) {
-            if (type >= ROUND && type < ROUND + 1.5) {
-                type = JOINT_CAP_ROUND;
-            }
-            //TODO: BUTT here too
-        }
-
-        if (vertexNum < 3.5) {
-            if (abs(D) < 0.01) {
-                pos = dy * norm;
-            } else {
-                if (flag < 0.5 && inner < 0.5) {
-                    pos = dy * norm;
-                } else {
-                    pos = doBisect(norm, len, norm2, len2, dy, inner);
-                }
-            }
-            if (capType >= CAP_BUTT && capType < CAP_ROUND) {
-                float extra = step(CAP_SQUARE, capType) * lineWidth;
-                vec2 back = -forward;
-                if (vertexNum < 0.5 || vertexNum > 2.5) {
-                    pos += back * (expand + extra);
-                    dy2 = expand;
-                } else {
-                    dy2 = dot(pos + base - pointA, back) - extra;
-                }
-            }
-            if (type >= JOINT_CAP_BUTT && type < JOINT_CAP_SQUARE + 0.5) {
-                float extra = step(JOINT_CAP_SQUARE, type) * lineWidth;
-                if (vertexNum < 0.5 || vertexNum > 2.5) {
-                    dy3 = dot(pos + base - pointB, forward) - extra;
-                } else {
-                    pos += forward * (expand + extra);
-                    dy3 = expand;
-                    if (capType >= CAP_BUTT) {
-                        dy2 -= expand + extra;
-                    }
-                }
-            }
-        } else if (type >= JOINT_CAP_ROUND && type < JOINT_CAP_ROUND + 1.5) {
-            if (inner > 0.5) {
-                dy = -dy;
-                inner = 0.0;
-            }
-            vec2 d2 = abs(dy) * vec2(-norm.y, norm.x);
-            if (vertexNum < 4.5) {
-                dy = -dy;
-                pos = dy * norm;
-            } else if (vertexNum < 5.5) {
-                pos = dy * norm;
-            } else if (vertexNum < 6.5) {
-                pos = dy * norm + d2;
-            } else {
-                dy = -dy;
-                pos = dy * norm + d2;
-            }
-            dy = -0.5;
-            dy2 = pos.x;
-            dy3 = pos.y;
-            vType = 3.0;
-        } else if (abs(D) < 0.01) {
-            pos = dy * norm;
-        } else {
-            if (type >= ROUND && type < ROUND + 1.5) {
-                if (inner > 0.5) {
-                    dy = -dy;
-                    inner = 0.0;
-                }
-                if (vertexNum < 4.5) {
-                    pos = doBisect(norm, len, norm2, len2, -dy, 1.0);
-                } else if (vertexNum < 5.5) {
-                    pos = dy * norm;
-                } else if (vertexNum > 7.5) {
-                    pos = dy * norm2;
-                } else {
-                    pos = doBisect(norm, len, norm2, len2, dy, 0.0);
-                    float d2 = abs(dy);
-                    if (length(pos) > abs(dy) * 1.5) {
-                        if (vertexNum < 6.5) {
-                            pos.x = dy * norm.x - d2 * norm.y;
-                            pos.y = dy * norm.y + d2 * norm.x;
-                        } else {
-                            pos.x = dy * norm2.x + d2 * norm2.y;
-                            pos.y = dy * norm2.y - d2 * norm2.x;
-                        }
-                    }
-                }
-                vec2 norm3 = normalize(norm - norm2);
-                dy = pos.x * norm3.y - pos.y * norm3.x - 1.0;
-                dy2 = pos.x;
-                dy3 = pos.y;
-                vType = 3.0;
-            } else {
-                float hit = 0.0;
-                if (type >= MITER && type < MITER + 3.5) {
-                    if (inner > 0.5) {
-                        dy = -dy;
-                        inner = 0.0;
-                    }
-                    float sign = step(0.0, dy) * 2.0 - 1.0;
-                    pos = doBisect(norm, len, norm2, len2, dy, 0.0);
-                    if (length(pos) > abs(dy) * miterLimit) {
-                        type = BEVEL;
-                    } else {
-                        if (vertexNum < 4.5) {
-                            dy = -dy;
-                            pos = doBisect(norm, len, norm2, len2, dy, 1.0);
-                        } else if (vertexNum < 5.5) {
-                            pos = dy * norm;
-                        } else if (vertexNum > 6.5) {
-                            pos = dy * norm2;
-                            // dy = ...
-                        }
-                        vType = 1.0;
-                        dy = -sign * dot(pos, norm);
-                        dy2 = -sign * dot(pos, norm2);
-                        hit = 1.0;
-                    }
-                }
-                if (type >= BEVEL && type < BEVEL + 1.5) {
-                    if (inner > 0.5) {
-                        dy = -dy;
-                        inner = 0.0;
-                    }
-                    float d2 = abs(dy);
-                    vec2 pos3 = vec2(dy * norm.x - d2 * norm.y, dy * norm.y + d2 * norm.x);
-                    vec2 pos4 = vec2(dy * norm2.x + d2 * norm2.y, dy * norm2.y - d2 * norm2.x);
-                    if (vertexNum < 4.5) {
-                        pos = doBisect(norm, len, norm2, len2, -dy, 1.0);
-                    } else if (vertexNum < 5.5) {
-                        pos = dy * norm;
-                    } else if (vertexNum > 7.5) {
-                        pos = dy * norm2;
-                    } else {
-                        if (vertexNum < 6.5) {
-                            pos = pos3;
-                        } else {
-                            pos = pos4;
-                        }
-                    }
-                    vec2 norm3 = normalize(norm + norm2);
-                    float sign = step(0.0, dy) * 2.0 - 1.0;
-
-                    dy = -sign * dot(pos, norm);
-                    dy2 = -sign * dot(pos, norm2);
-                    dy3 = (-sign * dot(pos, norm3)) + lineWidth;
-                    vType = 4.0;
-                    hit = 1.0;
-                }
-                if (hit < 0.5) {
-                    gl_Position = vec4(0.0, 0.0, 0.0, 1.0);
-                    return;
-                }
-            }
-        }
-
-        pos += base;
-        vDistance = vec4(dy, dy2, dy3, lineWidth) * resolution;
-    }
-
-    gl_Position = vec4((projectionMatrix * vec3(pos, 1.0)).xy, 0.0, 1.0);
-}`;
-
-    const plotFrag = `precision highp float;
-varying vec4 vDistance;
-varying float vType;
-uniform vec4 uColor;
-
-void main(void){
-    float alpha = 1.0;
-    float lineWidth = vDistance.w;
-    if (vType < 0.5) {
-        float left = max(vDistance.x - 0.5, -vDistance.w);
-        float right = min(vDistance.x + 0.5, vDistance.w);
-        float near = vDistance.y - 0.5;
-        float far = min(vDistance.y + 0.5, 0.0);
-        float top = vDistance.z - 0.5;
-        float bottom = min(vDistance.z + 0.5, 0.0);
-        alpha = max(right - left, 0.0) * max(bottom - top, 0.0) * max(far - near, 0.0);
-    } else if (vType < 1.5) {
-        float a1 = clamp(vDistance.x + 0.5 - lineWidth, 0.0, 1.0);
-        float a2 = clamp(vDistance.x + 0.5 + lineWidth, 0.0, 1.0);
-        float b1 = clamp(vDistance.y + 0.5 - lineWidth, 0.0, 1.0);
-        float b2 = clamp(vDistance.y + 0.5 + lineWidth, 0.0, 1.0);
-        alpha = a2 * b2 - a1 * b1;
-    } else if (vType < 2.5) {
-        alpha *= max(min(vDistance.x + 0.5, 1.0), 0.0);
-        alpha *= max(min(vDistance.y + 0.5, 1.0), 0.0);
-        alpha *= max(min(vDistance.z + 0.5, 1.0), 0.0);
-    } else if (vType < 3.5) {
-        float dist2 = sqrt(dot(vDistance.yz, vDistance.yz));
-        float rad = vDistance.w;
-        float left = max(dist2 - 0.5, -rad);
-        float right = min(dist2 + 0.5, rad);
-        // TODO: something has to be done about artifact at vDistance.x far side
-        alpha = 1.0 - step(vDistance.x, 0.0) * (1.0 - max(right - left, 0.0));
-    } else {
-        float a1 = clamp(vDistance.x + 0.5 - lineWidth, 0.0, 1.0);
-        float a2 = clamp(vDistance.x + 0.5 + lineWidth, 0.0, 1.0);
-        float b1 = clamp(vDistance.y + 0.5 - lineWidth, 0.0, 1.0);
-        float b2 = clamp(vDistance.y + 0.5 + lineWidth, 0.0, 1.0);
-        alpha = a2 * b2 - a1 * b1;
-        alpha *= max(min(vDistance.z + 0.5, 1.0), 0.0);
-    }
-    gl_FragColor = uColor * alpha;
-}
-`;
-
-    class PlotShader extends mesh.MeshMaterial {
-        static __initStatic() {this._prog = null;}
-
-        static getProgram() {
-            if (!PlotShader._prog) {
-                PlotShader._prog = new core.Program(plotVert, plotFrag);
-            }
-            return PlotShader._prog;
-        }
-
-        constructor() {
-            super(core.Texture.WHITE, {
-                uniforms: {
-                    resolution: 1,
-                    expand: 1,
-                    styleLine: new Float32Array([1.0, 0.5]),
-                    miterLimit: 5.0,
-                },
-                program: PlotShader.getProgram()
-            });
-        }
-    } PlotShader.__initStatic();
-
-    function multIndex(indices, vertCount, instanceCount, support32 = true) {
-        const size = indices.length;
-        const ind = support32 ? new Uint32Array(size * instanceCount) : new Uint16Array(size * instanceCount);
-        for (let i = 0; i < instanceCount; i++) {
-            for (let j = 0; j < size; j++) {
-                ind[i * size + j] = indices[j] + vertCount * i;
-            }
-        }
-        return ind;
-    }
-
-    class PlotGeometry extends core.Geometry {
-        constructor(_static = false) {
-            super();PlotGeometry.prototype.__init.call(this);PlotGeometry.prototype.__init2.call(this);PlotGeometry.prototype.__init3.call(this);PlotGeometry.prototype.__init4.call(this);PlotGeometry.prototype.__init5.call(this);PlotGeometry.prototype.__init6.call(this);PlotGeometry.prototype.__init7.call(this);PlotGeometry.prototype.__init8.call(this);PlotGeometry.prototype.__init9.call(this);PlotGeometry.prototype.__init10.call(this);PlotGeometry.prototype.__init11.call(this);PlotGeometry.prototype.__init12.call(this);PlotGeometry.prototype.__init13.call(this);PlotGeometry.prototype.__init14.call(this);PlotGeometry.prototype.__init15.call(this);PlotGeometry.prototype.__init16.call(this);PlotGeometry.prototype.__init17.call(this);PlotGeometry.prototype.__init18.call(this);PlotGeometry.prototype.__init19.call(this);;
-            this.initGeom(_static);
-            this.reset();
-        }
-
-        __init() {this.joinStyle = graphics.LINE_JOIN.MITER;}
-        __init2() {this.capStyle = graphics.LINE_CAP.SQUARE;}
-
-        __init3() {this.lastLen = 0;}
-        __init4() {this.lastPointNum = 0;}
-        __init5() {this.lastPointData = 0;}
-        __init6() {this.updateId = 0;}
-        __init7() {this.points = [];}
-        __init8() {this._floatView = null;}
-        __init9() {this._u32View = null;}
-        __init10() {this._buffer = null;}
-        __init11() {this._quad = null;}
-        __init12() {this._indexBuffer = null;}
-        __init13() {this._vertexNums = null;}
-        __init14() {this.support32 = false;}
-
-        initGeom(_static) {
-            this._buffer = new core.Buffer(new Float32Array(0), _static, false);
-
-            this._vertexNums = new core.Buffer(new Float32Array([0, 1, 2, 3, 4, 5, 6, 7, 8]), true, false);
-
-            this._indexBuffer = new core.Buffer(new Uint16Array([0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7, 4, 7, 8]), true, true);
-
-            this.addAttribute('aPrev', this._buffer, 2, false, constants.TYPES.FLOAT, 3 * 4, 0 * 4, true)
-                .addAttribute('aPoint1', this._buffer, 2, false, constants.TYPES.FLOAT, 3 * 4, 3 * 4, true)
-                .addAttribute('aPoint2', this._buffer, 2, false, constants.TYPES.FLOAT, 3 * 4, 6 * 4, true)
-                .addAttribute('aNext', this._buffer, 2, false, constants.TYPES.FLOAT, 3 * 4, 9 * 4, true)
-                .addAttribute('aVertexJoint', this._buffer, 1, false, constants.TYPES.FLOAT, 3 * 4, 5 * 4, true)
-                .addAttribute('vertexNum', this._vertexNums, 1, false, constants.TYPES.FLOAT)
-                .addIndex(this._indexBuffer);
-        }
-
-        __init15() {this.stridePoints = 2;}
-        __init16() {this.strideFloats = 3;}
-        __init17() {this.strideBytes = 3 * 4;}
-
-        moveTo(x, y) {
-            const {points} = this;
-            points.push(x);
-            points.push(y);
-        }
-
-        lineTo(x, y) {
-            const {points} = this;
-            points.push(x);
-            points.push(y);
-        }
-
-
-        lineBy(dx, dy) {
-            const {points, stridePoints} = this;
-
-            const x = points[points.length - stridePoints];
-            const y = points[points.length - stridePoints + 1];
-
-            points.push(x + dx);
-            points.push(y + dy);
-        }
-
-        invalidate(pointNum = 0) {
-            this.lastPointNum = Math.min(pointNum, this.lastPointNum);
-            this.updateId++;
-        }
-
-        reset() {
-            if (this.lastLen > 0) {
-                this.clearBufferData();
-            }
-            this.updateId++;
-            this.lastLen = 0;
-            this.lastPointData = 0;
-            this.points.length = 0;
-            this.instanceCount = 0;
-        }
-
-        clearBufferData() {
-            const {points, strideBytes, stridePoints} = this;
-            this.lastPointNum = 0;
-            this.lastPointData = 0;
-            const arrayLen = Math.max(0, points.length / stridePoints + 3);
-            const arrBuf = new ArrayBuffer(strideBytes * arrayLen);
-            this.lastLen = points.length;
-            this._floatView = new Float32Array(arrBuf);
-            this._u32View = new Uint32Array(arrBuf);
-            this._buffer.update(arrBuf);
-        }
-
-        updateBuffer() {
-            const {points, stridePoints, strideFloats} = this;
-
-            if (this.lastLen > points.length) {
-                this.lastLen = -1;
-            }
-            if (this.lastLen < points.length
-                || this.lastPointNum < this.lastLen) { // TODO: partial upload
-                this.clearBufferData();
-            }
-
-            if (this.lastPointNum == this.lastLen) {
-                return;
-            }
-
-            const jointType = this.jointType();
-            const capType = this.capType();
-            let endJoint = capType;
-            if (capType === JOINT_TYPE.CAP_ROUND) {
-                endJoint = JOINT_TYPE.JOINT_CAP_ROUND;
-            }
-            if (capType === JOINT_TYPE.CAP_BUTT) {
-                endJoint = JOINT_TYPE.JOINT_CAP_BUTT;
-            }
-            if (capType === JOINT_TYPE.CAP_SQUARE) {
-                endJoint = JOINT_TYPE.JOINT_CAP_SQUARE;
-            }
-
-            const {_floatView, _u32View} = this;
-
-            if (this.lastPointNum > 0) {
-                this.lastPointNum--;
-            }
-            if (this.lastPointNum > 0) {
-                this.lastPointNum--;
-            }
-
-            this.lastPointData = Math.min(this.lastPointData, this.lastPointNum);
-            let j = (Math.round(this.lastPointNum / stridePoints) + 2) * strideFloats; //actually that's int division
-
-            for (let i = this.lastPointNum; i < points.length; i += stridePoints) {
-                _floatView[j++] = points[i];
-                _floatView[j++] = points[i + 1];
-                _floatView[j] = jointType;
-                if (i == 0 && capType !== JOINT_TYPE.CAP_ROUND) {
-                    _floatView[j] += capType;
-                }
-                if (i + stridePoints * 2 >= points.length) {
-                    _floatView[j] += endJoint - jointType;
-                } else if (i + stridePoints >= points.length) {
-                    _floatView[j] = 0;
-                }
-                j++;
-            }
-            _floatView[j++] = points[points.length - 4];
-            _floatView[j++] = points[points.length - 2];
-            _floatView[j++] = 0;
-            _floatView[0] = points[0];
-            _floatView[1] = points[1];
-            _floatView[2] = 0;
-            _floatView[3] = points[2];
-            _floatView[4] = points[3];
-            _floatView[5] = capType === JOINT_TYPE.CAP_ROUND ? capType : 0;
-
-            //TODO: update from first modified float
-            this._buffer.update();
-            this.instanceCount = Math.round(points.length / stridePoints);
-
-            this.lastPointNum = this.lastLen;
-            this.lastPointData = this.lastLen; // TODO: partial upload
-
-            if (this.legacyGeom) {
-                this.updateLegacy();
-            }
-        }
-
-        __init18() {this.legacyGeom = null;}
-        __init19() {this.legacyBuffer = null;}
-
-        initLegacy(support32) {
-            if (this.legacyGeom) {
-                return;
-            }
-            const ind = [0, 1, 2, 0, 2, 3];
-            this.support32 = support32;
-            this.legacyGeom = new core.Geometry();
-            this.legacyBuffer = new core.Buffer(new Float32Array(0), false, false);
-            this.legacyGeom.addAttribute('aPrev', this.legacyBuffer, 2, false, constants.TYPES.FLOAT)
-                .addAttribute('aPoint1', this.legacyBuffer, 2, false, constants.TYPES.FLOAT)
-                .addAttribute('aPoint2', this.legacyBuffer, 2, false, constants.TYPES.FLOAT)
-                .addAttribute('aNext', this.legacyBuffer, 2, false, constants.TYPES.FLOAT)
-                .addAttribute('aVertexJoint', this.legacyBuffer, 1, false, constants.TYPES.FLOAT)
-                .addAttribute('vertexNum', this.legacyBuffer, 1, false, constants.TYPES.FLOAT)
-                .addIndex(new core.Buffer(support32? new Uint32Array(ind): new Uint16Array(ind), false, true));
-        }
-
-        updateLegacy() {
-            const {legacyBuffer, _floatView, _u32View, strideFloats} = this;
-            const strideLegacy = 10;
-            const vcount = 9;
-            const instanceCount = (this._floatView.length / strideFloats - 3);
-            const legacyLen = instanceCount * strideLegacy * vcount;
-            if ((legacyBuffer.data ).length !== legacyLen) {
-                legacyBuffer.data = new Float32Array(legacyLen);
-                this.legacyGeom.getIndex().update(multIndex(this._indexBuffer.data , vcount, instanceCount, this.support32));
-            }
-            const floats = legacyBuffer.data ;
-            for (let i = 0, j = 0; j < legacyLen; i += strideFloats) {
-                for (let k = 0; k < vcount; k++) {
-                    floats[j++] = _floatView[i];
-                    floats[j++] = _floatView[i + 1];
-                    floats[j++] = _floatView[i + 3];
-                    floats[j++] = _floatView[i + 4];
-                    floats[j++] = _floatView[i + 6];
-                    floats[j++] = _floatView[i + 7];
-                    floats[j++] = _floatView[i + 9];
-                    floats[j++] = _floatView[i + 10];
-                    floats[j++] = _floatView[i + 5];
-                    floats[j++] = k;
-                }
-            }
-        }
-
-        /**
-         * copied from graphics-smooth
-         */
-         capType() {
-            let cap;
-
-            switch (this.capStyle) {
-                case graphics.LINE_CAP.SQUARE:
-                    cap = JOINT_TYPE.CAP_SQUARE;
-                    break;
-                case graphics.LINE_CAP.ROUND:
-                    cap = JOINT_TYPE.CAP_ROUND;
-                    break;
-                default:
-                    cap = JOINT_TYPE.CAP_BUTT;
-                    break;
-            }
-
-            return cap;
-        }
-
-        /**
-         * copied from graphics-smooth
-         */
-         goodJointType() {
-            let joint;
-
-            switch (this.joinStyle) {
-                case graphics.LINE_JOIN.BEVEL:
-                    joint = JOINT_TYPE.JOINT_BEVEL;
-                    break;
-                case graphics.LINE_JOIN.ROUND:
-                    joint = JOINT_TYPE.JOINT_ROUND;
-                    break;
-                default:
-                    joint = JOINT_TYPE.JOINT_MITER + 3;
-                    break;
-            }
-
-            return joint;
-        }
-
-        /**
-         * copied from graphics-smooth
-         */
-         jointType() {
-            let joint;
-
-            switch (this.joinStyle) {
-                case graphics.LINE_JOIN.BEVEL:
-                    joint = JOINT_TYPE.JOINT_BEVEL;
-                    break;
-                case graphics.LINE_JOIN.ROUND:
-                    joint = JOINT_TYPE.JOINT_ROUND;
-                    break;
-                default:
-                    joint = JOINT_TYPE.JOINT_MITER;
-                    break;
-            }
-
-            return joint;
-        }
-    }
-
-
-
-
-
-
-
-
-    class Plot extends mesh.Mesh {
-        constructor(options) {
-            const geometry = new PlotGeometry();
-            const shader = new PlotShader();
-            if (options) {
-                if (options.lineWidth !== undefined) {
-                    shader.uniforms.styleLine[0] = options.lineWidth;
-                }
-                if (options.nativeLineWidth !== undefined) {
-                    shader.uniforms.styleLine[0] = options.nativeLineWidth;
-                }
-                if (options.joinStyle !== undefined) {
-                    geometry.joinStyle = options.joinStyle;
-                }
-                if (options.capStyle !== undefined) {
-                    geometry.capStyle = options.capStyle;
-                }
-            }
-
-            super(geometry, shader);
-        }
-
-        moveTo(x, y) {
-            const geometry = this.geometry ;
-            geometry.moveTo(x, y);
-        }
-
-        lineTo(x, y) {
-            const geometry = this.geometry ;
-            geometry.lineTo(x, y);
-        }
-
-        lineBy(x, y) {
-            const geometry = this.geometry ;
-            geometry.lineBy(x, y);
-        }
-
-        lineStyle(width, nativeWidth, joinStyle, capStyle) {
-            const geometry = this.geometry ;
-            if (width !== undefined) {
-
-                this.shader.uniforms.styleLine[0] = width;
-            }
-            if (nativeWidth !== undefined) {
-                this.shader.uniforms.styleLine[0] = -nativeWidth;
-            }
-            if (joinStyle !== undefined) {
-                geometry.joinStyle = joinStyle;
-            }
-            if (capStyle !== undefined) {
-                geometry.capStyle = capStyle;
-            }
-            geometry.invalidate();
-        }
-
-        clear() {
-            (this.geometry ).reset();
-        }
-
-        _renderDefault(renderer) {
-            const geometry = this.geometry ;
-
-            if (geometry.points.length < 4) {
-                return;
-            }
-
-            const useLegacy = !renderer.geometry.hasInstance;
-            if (useLegacy) {
-                geometry.initLegacy(renderer.context.supports.uint32Indices);
-            }
-            geometry.updateBuffer();
-            if (geometry.instanceCount === 0) {
-                return;
-            }
-            const rt = renderer.renderTexture.current;
-            const multisample = rt ? rt.framebuffer.multisample > 1 : renderer.options.antialias;
-            const resolution = this.shader.uniforms.resolution = (rt ? rt.baseTexture.resolution : renderer.resolution);
-            this.shader.uniforms.expand = (multisample ? 2 : 1) / resolution;
-
-            if (useLegacy) {
-                // hacky!
-                (this ).geometry = geometry.legacyGeom;
-                super._renderDefault(renderer);
-                (this ).geometry = geometry;
-                return;
-            }
-            super._renderDefault(renderer);
-        }
-
-        _renderCanvas(renderer) {
-            const {points, stridePoints} = this.geometry ;
-            const {context} = renderer;
-            const len = points.length;
-            if (len < 2) {
-                return;
-            }
-            const wt = this.transform.worldTransform;
-            renderer.setContextTransform(wt);
-
-            const scale = Math.sqrt(wt.a * wt.a + wt.b * wt.b);
-            context.lineWidth = this.shader.uniforms.styleLine[0] + this.shader.uniforms.styleLine[1] / scale;
-
-            context.strokeStyle = utils.hex2string(this.tint);
-            context.globalAlpha = this.worldAlpha;
-
-            context.beginPath();
-            context.moveTo(points[0], points[1]);
-            for (let i = 2; i < points.length; i += stridePoints) {
-                context.lineTo(points[i], points[i + 1]);
-            }
-            context.stroke();
-            context.beginPath();
-
-            context.globalAlpha = 1.0;
-        }
-    }
-
-    const gradVert = `
-attribute vec2 aVertexPosition;
-
-uniform mat3 projectionMatrix;
-uniform mat3 translationMatrix;
-uniform vec2 rangeY;
-
-varying float vOrdinate;
-
-void main(void)
-{
-vec2 pos = (translationMatrix * vec3(aVertexPosition, 1.0)).xy;
-if (pos.y > rangeY.y) {
-    pos.y = rangeY.y;
-}
-gl_Position = vec4((projectionMatrix * vec3(pos, 1.0)).xy, 0.0, 1.0);
-vOrdinate = pos.y;
-}`;
-    const gradFrag = `
-varying float vOrdinate;
-
-uniform vec4 colorTop;
-uniform vec4 colorBottom;
-uniform vec4 uColor;
-uniform vec2 rangeY2;
-
-void main(void)
-{
-vec4 color = colorTop;
-if (vOrdinate > rangeY2.x) {
-    if (vOrdinate >= rangeY2.y) {
-        color = colorBottom;
-    } else {
-        color = colorTop + (colorBottom - colorTop) * (vOrdinate - rangeY2.x) / (rangeY2.y - rangeY2.x);
-    }
-}
-
-color.rgb *= color.a;
-gl_FragColor = color * uColor;
-}
-`;
-
-    class PlotGradientShader extends mesh.MeshMaterial {
-        static __initStatic() {this._prog = null;}
-
-        static getProgram() {
-            if (!PlotGradientShader._prog) {
-                PlotGradientShader._prog = new core.Program(gradVert, gradFrag);
-            }
-            return PlotGradientShader._prog;
-        }
-
-        constructor() {
-            const rangeY = new Float32Array(2);
-            super(core.Texture.WHITE, {
-                uniforms: {
-                    resolution: 1,
-                    colorTop: new Float32Array([1, 1, 1, 1]),
-                    colorBottom: new Float32Array([1, 1, 1, 1]),
-                    rangeY: rangeY,
-                    rangeY2: rangeY,
-                },
-                program: PlotGradientShader.getProgram()
-            });
-        }
-    } PlotGradientShader.__initStatic();
-
-    class PlotGradientGeometry extends core.Geometry {
-        constructor(_static = false) {
-            super();PlotGradientGeometry.prototype.__init.call(this);PlotGradientGeometry.prototype.__init2.call(this);PlotGradientGeometry.prototype.__init3.call(this);PlotGradientGeometry.prototype.__init4.call(this);PlotGradientGeometry.prototype.__init5.call(this);PlotGradientGeometry.prototype.__init6.call(this);PlotGradientGeometry.prototype.__init7.call(this);PlotGradientGeometry.prototype.__init8.call(this);PlotGradientGeometry.prototype.__init9.call(this);;
-            this.initGeom(_static);
-            this.reset();
-        }
-
-        __init() {this.lastLen = 0;}
-        __init2() {this.lastPointNum = 0;}
-        __init3() {this.lastPointData = 0;}
-        __init4() {this.points = [];}
-        __init5() {this._floatView = null;}
-        __init6() {this._buffer = null;}
-
-        initGeom(_static) {
-            this._buffer = new core.Buffer(new Float32Array(0), _static, false);
-
-            this.addAttribute('aVertexPosition', this._buffer, 2, false, constants.TYPES.FLOAT);
-        }
-
-        __init7() {this.stridePoints = 2;}
-        __init8() {this.strideFloats = 2 * 6;}
-        __init9() {this.strideBytes = 8 * 6;}
-
-        moveTo(x, y) {
-            const {points} = this;
-            points.push(x);
-            points.push(y);
-        }
-
-        lineTo(x, y) {
-            const {points} = this;
-            points.push(x);
-            points.push(y);
-        }
-
-        invalidate(pointNum = 0) {
-            this.lastPointNum = Math.min(pointNum, this.lastPointNum);
-        }
-
-        reset() {
-            if (this.lastLen > 0) {
-                this.clearBufferData();
-            }
-            this.lastLen = 0;
-            this.lastPointData = 0;
-            this.points.length = 0;
-        }
-
-        clearBufferData() {
-            const {points, strideFloats, stridePoints} = this;
-            this.lastPointNum = 0;
-            this.lastPointData = 0;
-            const arrayLen = Math.max(0, points.length / stridePoints - 1);
-            this._floatView = new Float32Array(strideFloats * arrayLen);
-            this._buffer.update(this._floatView);
-            this.lastLen = points.length;
-        }
-
-        updateBuffer() {
-            const {points, stridePoints, strideFloats} = this;
-
-            if (this.lastLen > points.length) {
-                this.lastLen = -1;
-            }
-            if (this.lastLen < points.length
-                || this.lastPointNum < this.lastLen) { // TODO: partial upload
-                this.clearBufferData();
-            }
-
-            if (this.lastPointNum == this.lastLen) {
-                return;
-            }
-
-            const {_floatView} = this;
-            this.lastPointData = Math.min(this.lastPointData, this.lastPointNum);
-            let j = Math.round(this.lastPointNum * strideFloats / stridePoints);
-            for (let i = this.lastPointNum; i < points.length - stridePoints; i += stridePoints) {
-                const next = i + stridePoints;
-
-                const x = points[i], y = points[i + 1], x2 = points[next], y2 = points[next + 1];
-
-                const bottomLine = 10000.0;
-
-                _floatView[j++] = x;
-                _floatView[j++] = y;
-                _floatView[j++] = x2;
-                _floatView[j++] = y2;
-                _floatView[j++] = x2;
-                _floatView[j++] = bottomLine;
-                _floatView[j++] = x;
-                _floatView[j++] = y;
-                _floatView[j++] = x2;
-                _floatView[j++] = bottomLine;
-                _floatView[j++] = x;
-                _floatView[j++] = bottomLine;
-            }
-            this._buffer.update();
-
-            this.lastPointNum = this.lastLen;
-            this.lastPointData = this.lastLen; // TODO: partial upload
-        }
-    }
-
-    class PlotGradient extends mesh.Mesh {
-        constructor() {
-            super(new PlotGradientGeometry(), new PlotGradientShader());PlotGradient.prototype.__init10.call(this);PlotGradient.prototype.__init11.call(this);;
-        }
-
-        get coordTop() {
-            return this.shader.uniforms.rangeY[0];
-        }
-
-        set coordTop(value) {
-            this.shader.uniforms.rangeY[0] = value;
-        }
-
-        get coordBottom() {
-            return this.shader.uniforms.rangeY[1];
-        }
-
-        set coordBottom(value) {
-            this.shader.uniforms.rangeY[1] = value;
-        }
-
-        get alphaTop() {
-            return this.shader.uniforms.colorTop[3];
-        }
-
-        set alphaTop(value) {
-            this.shader.uniforms.colorTop[3] = value;
-        }
-
-        get alphaBottom() {
-            return this.shader.uniforms.colorBottom[3];
-        }
-
-        set alphaBottom(value) {
-            this.shader.uniforms.colorBottom[3] = value;
-        }
-
-        get colorBottom() {
-            return utils.rgb2hex(this.shader.uniforms.colorBottom);
-        }
-
-        set colorBottom(value) {
-            utils.hex2rgb(value, this.shader.uniforms.colorBottom);
-        }
-
-        get colorTop() {
-            return utils.rgb2hex(this.shader.uniforms.colorTop);
-        }
-
-        set colorTop(value) {
-            utils.hex2rgb(value, this.shader.uniforms.colorTop);
-        }
-
-        __init10() {this.masterPlot = null;}
-        __init11() {this.plotUpdateId = -1;}
-
-        clear() {
-            if (!this.masterPlot) {
-                (this.geometry ).reset();
-            }
-        }
-
-        moveTo(x, y) {
-            this.lineTo(x, y);
-        }
-
-        lineTo(x, y) {
-            if (!this.masterPlot) {
-                (this.geometry ).lineTo(x, y);
-            }
-        }
-
-        _render(renderer) {
-            const geom = this.geometry ;
-            if (this.masterPlot) {
-                const plotGeom = this.masterPlot.geometry ;
-                if (this.plotUpdateId !== plotGeom.updateId) {
-                    this.plotUpdateId = plotGeom.updateId;
-                    geom.points = plotGeom.points;
-                    geom.invalidate();
-                }
-            }
-            geom.updateBuffer();
-
-            this._renderDefault(renderer);
-        }
-
-        _renderCanvas(renderer) {
-            const geom = this.geometry ;
-            // let points = geom.points;
-            // if (this.masterPlot) {
-            //     const plotGeom = this.masterPlot.geometry as PlotGeometry;
-            //     if (this.plotUpdateId !== plotGeom.updateId) {
-            //         this.plotUpdateId = plotGeom.updateId
-            //         geom.points = plotGeom.points;
-            //     }
-            // }
-            //
-            //
-            // const {points, stridePoints} = this.geometry as BarsGeometry;
-            // const {context} = renderer;
-            // const len = points.length;
-            // if (len < 2) {
-            //     return;
-            // }
-            // const wt = this.transform.worldTransform;
-            // renderer.setContextTransform(wt);
-            //
-            // const scale = Math.sqrt(wt.a * wt.a + wt.b * wt.b);
-            // context.lineWidth = this.shader.uniforms.lineWidth[0] + this.shader.uniforms.lineWidth[1] / scale;
-            //
-            // context.strokeStyle = utils.hex2string(this.tint);
-            // context.globalAlpha = this.worldAlpha;
-            //
-            // context.beginPath();
-            // context.moveTo(points[0], points[1]);
-            // for (let i = 2; i < points.length; i += stridePoints) {
-            //     context.lineTo(points[i], points[i + 1]);
-            // }
-            // context.stroke();
-            // context.beginPath();
-            //
-            // context.globalAlpha = 1.0;
-        }
-    }
-
-    class LineGraphicsDrawer extends BasePIXIDrawer {constructor(...args) { super(...args); LineGraphicsDrawer.prototype.__init.call(this);LineGraphicsDrawer.prototype.__init2.call(this);LineGraphicsDrawer.prototype.__init3.call(this); }
-         static  __initStatic() {this.CHART_TYPE = exports.CHART_TYPE.LINE;}
-         static  __initStatic2() {this.TARGET_TYPE = TARGET_TYPE.CHART;}
-
-         __init() {this._lastDirtyId = 0;}
-         __init2() {this._dirtyId = -1;}
-
-          __init3() {this.node = new Plot(null);}
-
-         update() {
-            const node = this.node;
-            const {
-                fromX, toX
-            } = this.chart.range;
-
-            const {
-                dataProvider,
-                viewport
-            } = this.chart;
-
-            const style = this.getParsedStyle();
-
-            node.clear();
-
-            const width = viewport.width;
-            const height = viewport.height - 30;
-
-            const data = dataProvider.fetch() ;
-            const max = Math.max(...data);
-            const min = Math.min(...data);
-            const step = width / data.length;
-
-            node.lineStyle(style.thickness || 2, void 0, style.lineJoint );
-
-            node.tint = utils.rgb2hex(style.stroke );
-            node.alpha = ( style.stroke)[3];
-
-            utils.hex2rgb(0xffffff, node.shader.uniforms.uGeomColor);
-
-            for (let i = 0; i < data.length; i ++) {
-                const x = step * i;
-                const y = 10 + height - height * (data[i] - min) / (max - min);
-
-                if (i === 0) {
-                    node.moveTo(x, y);
-                } else {
-                    node.lineTo(x, y);
-                }
-            }
-        }
-
-        reset() {
-            this.node.clear();
-        }
-    } LineGraphicsDrawer.__initStatic(); LineGraphicsDrawer.__initStatic2();
-
-    const DEFAULT_STYLE = {
-        fill: 0x0,
-        stroke: 0x0,
-        thickness: 2,
-        lineJoint: graphics.LINE_JOIN.BEVEL
-    };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    function validate(options) {
-        const result = {...options};
-
-        if (!options.data) {
-            throw  new Error('[Validate] Chart data must be presented!');
-        }
-
-        result.style =  {...DEFAULT_STYLE, ...(options.style) || {}};
-
-        // validate joints
-        const joint = result.style.lineJoint;
-        result.style.lineJoint = joint && (result.style.lineJoint in graphics.LINE_JOIN)
-                ? joint
-                : graphics.LINE_JOIN.BEVEL;
-
-        return result;
-    }
-
-    class Chart extends display.Container {
-         __init() {this.name = '';}
-          __init2() {this.range = new Range();}
-        
-        
-        
-          __init3() {this.viewport = new math.Rectangle();}
-
-        
-        
-
-        constructor (
-              options
-        ) {
-            super();this.options = options;Chart.prototype.__init.call(this);Chart.prototype.__init2.call(this);Chart.prototype.__init3.call(this);;
-
-            this.options = validate(options);
-
-            this.onRangeChanged = this.onRangeChanged.bind(this);
-
-            this.range.on(Observable.CHANGE_EVENT, this.onRangeChanged);
-
-            this.chartDrawer = new LineGraphicsDrawer(this);
-
-            const drawers = [
-                this.gridDrawer, this.chartDrawer, this.labelDrawer
-            ].filter(Boolean).map(e => e.node);
-
-            this.addChild(...drawers);
-
-            this.parse();
-        }
-
-         onRangeChanged (_field, _old, _newValue) {
-            this._emitUpdate();
-        }
-
-         parse() {
-            const data = this.options.data;
-            const labels = this.options.labels;
-
-            let primitiveData;
-
-            // parse data source
-            if ('data' in data) {
-                if ('fetch' in data) {
-                    this.dataProvider = data;
-                    this.labelProvider = labels ;
-                    return;
-                } else {
-                    primitiveData = data.data;
-                }
-            } else {
-                primitiveData = data ;
-            }
-
-            const firstEntry = primitiveData[0];
-
-            // array like
-            if (Array.isArray(firstEntry) && firstEntry.length === 2) {
-                this.dataProvider = new ArrayChainDataProvider(primitiveData, false);
-                this.labelProvider = new ArrayChainDataProvider(primitiveData, true);
-                return;
-            }
-
-            // object like
-            if (typeof firstEntry === 'object' && ('x' in firstEntry) && ('y' in firstEntry)) {
-                this.dataProvider = new ObjectDataProvider(primitiveData, false);
-                this.labelProvider = new ObjectDataProvider(primitiveData, true);
-                return;
-            }
-
-            // is array
-
-            this.dataProvider = new ArrayLikeDataProvider(primitiveData);
-            // TODO
-            // Generate a labels when it not present
-            this.labelProvider = new ArrayLikeDataProvider(labels );
-
-            this._emitUpdate();
-        }
-
-         setViewport (x, y, width, height) {
-            this.viewport.x = x;
-            this.viewport.y = y;
-            this.viewport.width = width;
-            this.viewport.height = height;
-
-            this.emit(exports.CHART_EVENTS.RESIZE, this);
-            this._emitUpdate();
-        }
-
-         destroy(_options) {
-            this.emit(exports.CHART_EVENTS.DESTROY, this);
-
-            super.destroy(_options);
-        }
-
-         _emitUpdate() {
-            this.emit(exports.CHART_EVENTS.UPDATE, this);
-        }
-    }
+    typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('@pixi/core'), require('@pixi/math'), require('@pixi/display'), require('@pixi/utils'), require('@pixi/graphics'), require('@pixi/mesh'), require('@pixi/constants')) :
+    typeof define === 'function' && define.amd ? define(['exports', '@pixi/core', '@pixi/math', '@pixi/display', '@pixi/utils', '@pixi/graphics', '@pixi/mesh', '@pixi/constants'], factory) :
+    (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global._pixi_charts = {}, global.PIXI, global.PIXI, global.PIXI, global.PIXI.utils, global.PIXI, global.PIXI, global.PIXI));
+}(this, (function (exports, core, math, display, utils, graphics, mesh, constants) { 'use strict';
 
     var appleIphone = /iPhone/i;
     var appleIpod = /iPod/i;
@@ -6116,6 +3928,2535 @@ gl_FragColor = color * uColor;
         return InteractionManager;
     }(utils.EventEmitter));
 
+    class Observable extends utils.EventEmitter {
+         static __initStatic() {this.CHANGE_EVENT = 'change';}
+         __init() {this._dirtyId = 0;}
+
+        constructor (fields) {
+            super();Observable.prototype.__init.call(this);Observable.prototype.__init2.call(this);Observable.prototype.__init3.call(this);;
+
+            if (fields) {
+                this.wrap(fields, this);
+            }
+        }
+
+
+         _broadcast (name, oldValue, newValue) {
+            if (this._suspended) {
+                return;
+            }
+
+            this.emit(Observable.CHANGE_EVENT, {
+                target: this,
+                name,
+                oldValue,
+                newValue
+            });
+        }
+
+         __init2() {this._suspended = false;}
+         __init3() {this._dirtyBeforeSuspend = 0;}
+
+        /**
+         * Suspend and not emit change events while suspended
+         * @protected
+         */
+         set suspended(v) {
+            if (v === this._suspended) {
+                return;
+            }
+
+            if (v) {
+                this._dirtyBeforeSuspend = this._dirtyId;
+                this._suspended = true;
+            } else {
+                this._suspended = false;
+
+                if (this._dirtyId !== this._dirtyBeforeSuspend) {
+                    this._broadcast();
+                }
+
+                this._dirtyBeforeSuspend = -1;
+            }
+        }
+
+         get suspended () {
+            return this._suspended;
+        }
+
+         dirtyId () {
+            return this._dirtyId;
+        }
+
+         wrap  (fields, target) {
+            target = target ;
+
+            for (const key of fields) {
+                Object.defineProperty(target, key, {
+                    set (v) {
+                        const old = this['_' + key];
+                        this['_' + key] = v;
+
+                        if (old !== v) {
+                            target._dirtyId ++;
+                            target._broadcast (key, old, v);
+                        }
+                    },
+
+                    get () {
+                        return this['_' + key];
+                    }
+                });
+            }
+
+            return target;
+        }
+    } Observable.__initStatic();
+
+    class Range extends Observable {
+        
+        
+        
+        
+
+        
+        
+        
+        
+
+        constructor (data = {}) {
+            super([
+                'fromX', 'fromY', 'toX', 'toY'
+            ]);
+
+            data && this.set(data);
+        }
+
+         get width() {
+            return this.toX - this.fromX;
+        }
+
+         get height() {
+            return this.toY - this.fromY;
+        }
+
+         set ({ fromX = this._fromX, fromY = this._fromY, toX = this._toX, toY = this._toY } = {}) {
+            this.suspended = true;
+
+            this.fromX = fromX;
+            this.fromY = fromY;
+            this.toX = toX;
+            this.toY = toY;
+
+            this.suspended = false;
+        }
+
+         scale(x, y) {
+            this.suspended = true;
+
+            const w = x * (this._toX - this._fromX);
+            const h = y * (this._toY - this._fromY);
+
+            this.toX = this._fromX + w;
+            this.toY = this._fromY + h;
+
+            this.suspended = false;
+        }
+
+         translate(x, y) {
+            this.suspended = true;
+
+            this.fromX += x;
+            this.toX += x;
+
+            this.fromY += y;
+            this.toY += y;
+
+            this.suspended = false;
+        }
+    }
+
+    exports.CHART_EVENTS = void 0; (function (CHART_EVENTS) {
+    	const UPDATE = 'chart:update'; CHART_EVENTS["UPDATE"] = UPDATE;
+    	const DESTROY = 'chart:destroy'; CHART_EVENTS["DESTROY"] = DESTROY;
+        const RESIZE = 'chart:resize'; CHART_EVENTS["RESIZE"] = RESIZE;
+    })(exports.CHART_EVENTS || (exports.CHART_EVENTS = {}));
+
+    exports.CHART_TYPE = void 0; (function (CHART_TYPE) {
+        const BAR = 'bar'; CHART_TYPE["BAR"] = BAR;
+        const LINE = 'line'; CHART_TYPE["LINE"] = LINE;
+        const AREA = 'area'; CHART_TYPE["AREA"] = AREA;
+    })(exports.CHART_TYPE || (exports.CHART_TYPE = {}));
+
+    class ArrayChainDataProvider  {
+
+        constructor (
+             data,
+              label = false,
+        ) {;this.data = data;this.label = label;}
+
+         _fetchValueInternal (index) {
+            const chain = this.data ;
+            const entry = chain[index];
+
+            return this.label ? entry[0] : entry;
+        }
+
+        fetch(from = 0, to){
+            const chain = this.data ;
+
+            to = to || (chain.length - 1);
+            to = Math.min(chain.length - 1, Math.max(from, to));
+
+            const data = [];
+
+            let minX = Infinity;
+            let minY = Infinity;
+            let maxX = -Infinity;
+            let maxY = -Infinity;
+
+            for (let i = 0; i < from - to; i ++) {
+                data[i] = this._fetchValueInternal(i);
+
+                if (!this.label) {
+                    minX = Math.min(data[i][0], minX);
+                    minY = Math.min(data[i][1], minY);
+                    maxX = Math.max(data[i][0], maxX);
+                    maxY = Math.max(data[i][1], maxY);
+                }
+            }
+
+            return {
+                data: data,
+                fromX: from,
+                toX: to,
+                dataBounds: {
+                    fromX: minX,
+                    fromY: minY,
+                    toX: maxX,
+                    toY: maxY
+                }
+            };
+        }
+    }
+
+    class ArrayLikeDataProvider  {
+        constructor(
+             data,
+              label = false,
+             step = 10) {;this.data = data;this.label = label;this.step = step;}
+
+        fetch (from = 0, to = this.data.length - 1) {
+            const arrayLike = this.data ;
+
+            to = to || (arrayLike.length - 1);
+            to = Math.min(arrayLike.length - 1, Math.max(from, to));
+
+            if (this.label) {
+                return {
+                    data: arrayLike.slice(from, to) ,
+                    fromX: from,
+                    toX: to,
+                    dataBounds: {
+                        // @todo Compute bounds for label data
+                        fromX: 0, toX: 0, fromY: 0, toY: 0,
+                    }
+                };
+            }
+
+            let minY = Infinity;
+            let maxY = -Infinity;
+
+            const data = arrayLike.slice(from, to)
+                    .map((e, i) => {
+                        minY = Math.min(e, minY);
+                        maxY = Math.max(e, maxY);
+
+                        return [ (i + from) * this.step, e];
+                    });
+
+            return {
+                data: data ,
+                fromX: from,
+                toX: to,
+                dataBounds: {
+                    fromX: data[0][0],
+                    toX: data[data.length - 1][0],
+                    fromY: minY,
+                    toY: maxY
+                }
+            };
+        }
+    }
+
+    class ObjectDataProvider extends ArrayChainDataProvider {
+    	 _fetchValueInternal(index) {
+    		const chain = this.data ;
+    		const entry = chain[index];
+
+    		return this.label ? entry.x: [entry.x, entry.y];
+    	}
+    }
+
+    const barVert = `
+attribute vec4 aRect;
+attribute vec2 aQuad;
+attribute vec4 aColor;
+uniform mat3 projectionMatrix;
+uniform mat3 translationMatrix;
+uniform float resolution;
+uniform vec4 uColor;
+uniform float threshold;
+
+varying vec2 vPos;
+varying vec4 vDistance;
+varying vec4 vColor;
+
+void main(void){
+vec2 p1 = (translationMatrix * vec3(aRect.xy, 1.0)).xy;
+vec2 p2 = (translationMatrix * vec3(aRect.xy + aRect.zw, 1.0)).xy;
+vec2 size = p2 - p1;
+
+vec2 tQuad = (aQuad * 2.0 - 1.0) * threshold;
+vec2 tWorld = tQuad;
+if (size.x < 0.0) {
+    tWorld.x = -tWorld.x;
+}
+if (size.y < 0.0) {
+    tWorld.y = -tWorld.y;
+}
+
+vec2 localPos = (translationMatrix * vec3(aRect.zw * aQuad, 0.0)).xy;
+vec2 cssPos = (p1 + localPos) + tWorld / resolution;
+vDistance.xy = abs(localPos) * resolution + tQuad;
+vDistance.zw = aRect.zw * resolution;
+gl_Position = vec4((projectionMatrix * vec3(cssPos, 1.0)).xy, 0.0, 1.0);
+vColor = aColor * uColor;
+}`;
+    const barFrag = `
+varying vec2 vPos;
+varying vec4 vDistance;
+varying vec4 vColor;
+
+void main(void) {
+vec2 leftTop = max(vDistance.xy - 0.5, 0.0);
+vec2 rightBottom = min(vDistance.xy + 0.5, vDistance.zw);
+vec2 area = max(rightBottom - leftTop, 0.0);
+float clip = area.x * area.y;
+
+gl_FragColor = vColor * clip;
+}`;
+
+    class BarsShader extends mesh.MeshMaterial {
+        static __initStatic() {this._prog = null;}
+
+        static getProgram() {
+            if (!BarsShader._prog) {
+                BarsShader._prog = new core.Program(barVert, barFrag);
+            }
+            return BarsShader._prog;
+        }
+
+        constructor() {
+            super(core.Texture.WHITE, {
+                uniforms: {
+                    resolution: 1,
+                    threshold: 1,
+                },
+                program: BarsShader.getProgram()
+            });
+        }
+    } BarsShader.__initStatic();
+
+    class BarsGeometry extends core.Geometry {
+        constructor(_static = false) {
+            super();BarsGeometry.prototype.__init.call(this);BarsGeometry.prototype.__init2.call(this);BarsGeometry.prototype.__init3.call(this);BarsGeometry.prototype.__init4.call(this);BarsGeometry.prototype.__init5.call(this);BarsGeometry.prototype.__init6.call(this);BarsGeometry.prototype.__init7.call(this);BarsGeometry.prototype.__init8.call(this);BarsGeometry.prototype.__init9.call(this);BarsGeometry.prototype.__init10.call(this);BarsGeometry.prototype.__init11.call(this);BarsGeometry.prototype.__init12.call(this);BarsGeometry.prototype.__init13.call(this);BarsGeometry.prototype.__init14.call(this);;
+            this.initGeom(_static);
+            this.reset();
+        }
+
+        __init() {this.lastLen = 0;}
+        __init2() {this.lastPointNum = 0;}
+        __init3() {this.lastPointData = 0;}
+        __init4() {this.points = [];}
+        __init5() {this._floatView = null;}
+        __init6() {this._u32View = null;}
+        __init7() {this._buffer = null;}
+        __init8() {this._quad = null;}
+        __init9() {this._indexBuffer = null;}
+
+        initGeom(_static) {
+            this._buffer = new core.Buffer(new Float32Array(0), _static, false);
+
+            this._quad = new core.Buffer(new Float32Array([0, 0, 1, 0, 1, 1, 0, 1]), true, false);
+
+            this._indexBuffer = new core.Buffer(new Uint16Array([0, 1, 2, 0, 2, 3]), true, true);
+
+            this.addAttribute('aRect', this._buffer, 4, false, constants.TYPES.FLOAT, undefined, undefined, true)
+                .addAttribute('aColor', this._buffer, 4, true, constants.TYPES.UNSIGNED_BYTE, undefined, undefined, true)
+                .addAttribute('aQuad', this._quad, 2, false, constants.TYPES.FLOAT)
+                .addIndex(this._indexBuffer);
+        }
+
+        __init10() {this.stridePoints = 5;}
+        __init11() {this.strideFloats = 5;}
+        __init12() {this.strideBytes = 20;}
+
+        addRect(x, y, w, h, color) {
+            const {points} = this;
+            points.push(x);
+            points.push(y);
+            points.push(w);
+            points.push(h);
+            points.push(color);
+        }
+
+        invalidate(pointNum = 0) {
+            this.lastPointNum = Math.min(pointNum, this.lastPointNum);
+        }
+
+        reset() {
+            if (this.lastLen > 0) {
+                this.clearBufferData();
+            }
+            this.lastLen = 0;
+            this.lastPointData = 0;
+            this.points.length = 0;
+            this.instanceCount = 0;
+        }
+
+        clearBufferData() {
+            const {points, strideBytes, stridePoints} = this;
+            this.lastPointNum = 0;
+            this.lastPointData = 0;
+            const arrBuf = new ArrayBuffer(strideBytes * points.length / stridePoints);
+            this.lastLen = points.length;
+            this._floatView = new Float32Array(arrBuf);
+            this._u32View = new Uint32Array(arrBuf);
+            this._buffer.update(arrBuf);
+        }
+
+        updateBuffer() {
+            const {points, stridePoints, strideFloats} = this;
+
+            if (this.lastLen > points.length) {
+                this.lastLen = -1;
+            }
+            if (this.lastLen < points.length
+                || this.lastPointNum < this.lastLen) { // TODO: partial upload
+                this.clearBufferData();
+            }
+
+            if (this.lastPointNum == this.lastLen) {
+                return;
+            }
+
+            const {_floatView, _u32View} = this;
+            this.lastPointData = Math.min(this.lastPointData, this.lastPointNum);
+            let j = Math.round(this.lastPointNum * strideFloats / stridePoints); //actually that's int division
+            for (let i = this.lastPointNum; i < points.length; i += stridePoints) {
+                _floatView[j++] = points[i];
+                _floatView[j++] = points[i + 1];
+                _floatView[j++] = points[i + 2];
+                _floatView[j++] = points[i + 3];
+
+                const rgb = points[i + 4];
+                const bgra = ((rgb >> 16) & 0xff) | (rgb & 0xff00) | ((rgb & 0xff) << 16) | (255 << 24);
+                _u32View[j++] = bgra;
+            }
+            this._buffer.update();
+            this.instanceCount = Math.round(points.length / stridePoints);
+
+            this.lastPointNum = this.lastLen;
+            this.lastPointData = this.lastLen; // TODO: partial upload
+
+            if (this.legacyGeom) {
+                this.updateLegacy();
+            }
+        }
+
+        __init13() {this.legacyGeom = null;}
+        __init14() {this.legacyBuffer = null;}
+
+        initLegacy() {
+            if (this.legacyGeom) {
+                return;
+            }
+            this.legacyGeom = new core.Geometry();
+            this.legacyBuffer = new core.Buffer(new Float32Array(0), false, false);
+            this.legacyGeom.addAttribute('aRect', this.legacyBuffer, 4, false, constants.TYPES.FLOAT)
+                .addAttribute('aColor', this.legacyBuffer, 4, true, constants.TYPES.UNSIGNED_BYTE)
+                .addAttribute('aQuad', this.legacyBuffer, 2, false, constants.TYPES.FLOAT)
+                .addIndex(new core.Buffer(new Uint16Array([0, 1, 2, 0, 2, 3]), false, true));
+        }
+
+        updateLegacy() {
+            const {legacyBuffer, _floatView, _u32View, strideFloats} = this;
+            const strideLegacy = 7;
+            const quadsCount = this._floatView.length / strideFloats;
+            const legacyLen = quadsCount * strideLegacy * 4;
+            if ((legacyBuffer.data ).length !== legacyLen) {
+                legacyBuffer.data = new Float32Array(legacyLen);
+                this.legacyGeom.getIndex().update(utils.createIndicesForQuads(quadsCount));
+            }
+            const floats = legacyBuffer.data ;
+            const quad = this._quad.data ;
+
+            for (let i = 0, j = 0; i < this._floatView.length;) {
+                for (let k = 0; k < 4; k++) {
+                    floats[j++] = _floatView[i];
+                    floats[j++] = _floatView[i + 1];
+                    floats[j++] = _floatView[i + 2];
+                    floats[j++] = _floatView[i + 3];
+                    floats[j++] = _floatView[i + 4];
+                    floats[j++] = quad[k * 2];
+                    floats[j++] = quad[k * 2 + 1];
+                }
+                i += strideFloats;
+            }
+            legacyBuffer.update();
+        }
+    }
+
+    class Bars extends mesh.Mesh {
+        constructor() {
+            super(new BarsGeometry(), new BarsShader());
+        }
+
+        addRect(x, y, w, h, color) {
+            const geometry = this.geometry ;
+            geometry.addRect(x, y, w, h, color);
+        }
+
+        clear() {
+            (this.geometry ).reset();
+        }
+
+        _renderDefault(renderer) {
+            const geometry = this.geometry ;
+
+            const useLegacy = !renderer.geometry.hasInstance;
+            if (useLegacy) {
+                geometry.initLegacy();
+            }
+            geometry.updateBuffer();
+            if (geometry.instanceCount === 0) {
+                return;
+            }
+            const rt = renderer.renderTexture.current;
+            this.shader.uniforms.resolution = rt ? rt.baseTexture.resolution : renderer.resolution;
+
+            const multisample = rt ? rt.framebuffer.multisample > 1 : renderer.options.antialias;
+            this.shader.uniforms.threshold = multisample ? 2 : 1;
+
+            if (useLegacy) {
+                // hacky!
+                (this ).geometry = geometry.legacyGeom;
+                super._renderDefault(renderer);
+                (this ).geometry = geometry;
+                return;
+            }
+            super._renderDefault(renderer);
+        }
+
+        _renderCanvas(renderer) {
+            const {points} = this.geometry ;
+            const {context} = renderer;
+
+            renderer.setContextTransform(this.transform.worldTransform);
+
+            context.beginPath();
+            let clr = -1;
+            for (let i = 0; i < points.length; i += 5) {
+                if (clr !== points[i + 4]) {
+                    clr = points[i + 4];
+                    let fill = utils.hex2string(clr);
+                    context.fillStyle = fill;
+                }
+                context.beginPath();
+                context.rect(points[i], points[i + 1], points[i + 2], points[i + 3]);
+                context.fill();
+            }
+            context.beginPath();
+        }
+    }
+
+    var JOINT_TYPE; (function (JOINT_TYPE) {
+        const NONE = 0; JOINT_TYPE[JOINT_TYPE["NONE"] = NONE] = "NONE";
+        const FILL = 1; JOINT_TYPE[JOINT_TYPE["FILL"] = FILL] = "FILL";
+        const JOINT_BEVEL = 4; JOINT_TYPE[JOINT_TYPE["JOINT_BEVEL"] = JOINT_BEVEL] = "JOINT_BEVEL";
+        const JOINT_MITER = 8; JOINT_TYPE[JOINT_TYPE["JOINT_MITER"] = JOINT_MITER] = "JOINT_MITER";
+        const JOINT_ROUND = 12; JOINT_TYPE[JOINT_TYPE["JOINT_ROUND"] = JOINT_ROUND] = "JOINT_ROUND";
+        const JOINT_CAP_BUTT = 16; JOINT_TYPE[JOINT_TYPE["JOINT_CAP_BUTT"] = JOINT_CAP_BUTT] = "JOINT_CAP_BUTT";
+        const JOINT_CAP_SQUARE = 18; JOINT_TYPE[JOINT_TYPE["JOINT_CAP_SQUARE"] = JOINT_CAP_SQUARE] = "JOINT_CAP_SQUARE";
+        const JOINT_CAP_ROUND = 20; JOINT_TYPE[JOINT_TYPE["JOINT_CAP_ROUND"] = JOINT_CAP_ROUND] = "JOINT_CAP_ROUND";
+        const FILL_EXPAND = 24; JOINT_TYPE[JOINT_TYPE["FILL_EXPAND"] = FILL_EXPAND] = "FILL_EXPAND";
+        const CAP_BUTT = 1 << 5; JOINT_TYPE[JOINT_TYPE["CAP_BUTT"] = CAP_BUTT] = "CAP_BUTT";
+        const CAP_SQUARE = 2 << 5; JOINT_TYPE[JOINT_TYPE["CAP_SQUARE"] = CAP_SQUARE] = "CAP_SQUARE";
+        const CAP_ROUND = 3 << 5; JOINT_TYPE[JOINT_TYPE["CAP_ROUND"] = CAP_ROUND] = "CAP_ROUND";
+        const CAP_BUTT2 = 4 << 5; JOINT_TYPE[JOINT_TYPE["CAP_BUTT2"] = CAP_BUTT2] = "CAP_BUTT2";
+    })(JOINT_TYPE || (JOINT_TYPE = {}));
+
+    const plotVert = `precision highp float;
+const float FILL = 1.0;
+const float BEVEL = 4.0;
+const float MITER = 8.0;
+const float ROUND = 12.0;
+const float JOINT_CAP_BUTT = 16.0;
+const float JOINT_CAP_SQUARE = 18.0;
+const float JOINT_CAP_ROUND = 20.0;
+
+const float FILL_EXPAND = 24.0;
+
+const float CAP_BUTT = 1.0;
+const float CAP_SQUARE = 2.0;
+const float CAP_ROUND = 3.0;
+const float CAP_BUTT2 = 4.0;
+
+// === geom ===
+attribute vec2 aPrev;
+attribute vec2 aPoint1;
+attribute vec2 aPoint2;
+attribute vec2 aNext;
+attribute float aVertexJoint;
+attribute float vertexNum;
+
+uniform mat3 projectionMatrix;
+uniform mat3 translationMatrix;
+
+varying vec4 vDistance;
+varying vec4 vArc;
+varying float vType;
+
+uniform float resolution;
+uniform float expand;
+uniform float miterLimit;
+uniform vec2 styleLine;
+
+vec2 doBisect(vec2 norm, float len, vec2 norm2, float len2,
+    float dy, float inner) {
+    vec2 bisect = (norm + norm2) / 2.0;
+    bisect /= dot(norm, bisect);
+    vec2 shift = dy * bisect;
+    if (inner > 0.5) {
+        if (len < len2) {
+            if (abs(dy * (bisect.x * norm.y - bisect.y * norm.x)) > len) {
+                return dy * norm;
+            }
+        } else {
+            if (abs(dy * (bisect.x * norm2.y - bisect.y * norm2.x)) > len2) {
+                return dy * norm;
+            }
+        }
+    }
+    return dy * bisect;
+}
+
+void main(void){
+    vec2 pointA = (translationMatrix * vec3(aPoint1, 1.0)).xy;
+    vec2 pointB = (translationMatrix * vec3(aPoint2, 1.0)).xy;
+
+    vec2 xBasis = pointB - pointA;
+    float len = length(xBasis);
+    vec2 forward = xBasis / len;
+    vec2 norm = vec2(forward.y, -forward.x);
+
+    float type = aVertexJoint;
+
+    vec2 avgDiag = (translationMatrix * vec3(1.0, 1.0, 0.0)).xy;
+    float avgScale = sqrt(dot(avgDiag, avgDiag) * 0.5);
+
+    float capType = floor(type / 32.0);
+    type -= capType * 32.0;
+    vArc = vec4(0.0);
+
+    float lineWidth = styleLine.x;
+    if (lineWidth < 0.0) {
+        lineWidth = -lineWidth;
+    } else {
+        lineWidth = lineWidth * avgScale;
+    }
+    lineWidth *= 0.5;
+    float lineAlignment = 2.0 * styleLine.y - 1.0;
+
+    vec2 pos;
+
+    if (capType == CAP_ROUND) {
+        if (vertexNum < 3.5) {
+            gl_Position = vec4(0.0, 0.0, 0.0, 1.0);
+            return;
+        }
+        type = JOINT_CAP_ROUND;
+        capType = 0.0;
+    }
+
+    if (type >= BEVEL) {
+        float dy = lineWidth + expand;
+        float inner = 0.0;
+        if (vertexNum >= 1.5) {
+            dy = -dy;
+            inner = 1.0;
+        }
+
+        vec2 base, next, xBasis2, bisect;
+        float flag = 0.0;
+        float sign2 = 1.0;
+        if (vertexNum < 0.5 || vertexNum > 2.5 && vertexNum < 3.5) {
+            next = (translationMatrix * vec3(aPrev, 1.0)).xy;
+            base = pointA;
+            flag = type - floor(type / 2.0) * 2.0;
+            sign2 = -1.0;
+        } else {
+            next = (translationMatrix * vec3(aNext, 1.0)).xy;
+            base = pointB;
+            if (type >= MITER && type < MITER + 3.5) {
+                flag = step(MITER + 1.5, type);
+                // check miter limit here?
+            }
+        }
+        xBasis2 = next - base;
+        float len2 = length(xBasis2);
+        vec2 norm2 = vec2(xBasis2.y, -xBasis2.x) / len2;
+        float D = norm.x * norm2.y - norm.y * norm2.x;
+        if (D < 0.0) {
+            inner = 1.0 - inner;
+        }
+
+        norm2 *= sign2;
+
+        if (abs(lineAlignment) > 0.01) {
+            float shift = lineWidth * lineAlignment;
+            pointA += norm * shift;
+            pointB += norm * shift;
+            if (abs(D) < 0.01) {
+                base += norm * shift;
+            } else {
+                base += doBisect(norm, len, norm2, len2, shift, 0.0);
+            }
+        }
+
+        float collinear = step(0.0, dot(norm, norm2));
+
+        vType = 0.0;
+        float dy2 = -1000.0;
+        float dy3 = -1000.0;
+
+        if (abs(D) < 0.01 && collinear < 0.5) {
+            if (type >= ROUND && type < ROUND + 1.5) {
+                type = JOINT_CAP_ROUND;
+            }
+            //TODO: BUTT here too
+        }
+
+        if (vertexNum < 3.5) {
+            if (abs(D) < 0.01) {
+                pos = dy * norm;
+            } else {
+                if (flag < 0.5 && inner < 0.5) {
+                    pos = dy * norm;
+                } else {
+                    pos = doBisect(norm, len, norm2, len2, dy, inner);
+                }
+            }
+            if (capType >= CAP_BUTT && capType < CAP_ROUND) {
+                float extra = step(CAP_SQUARE, capType) * lineWidth;
+                vec2 back = -forward;
+                if (vertexNum < 0.5 || vertexNum > 2.5) {
+                    pos += back * (expand + extra);
+                    dy2 = expand;
+                } else {
+                    dy2 = dot(pos + base - pointA, back) - extra;
+                }
+            }
+            if (type >= JOINT_CAP_BUTT && type < JOINT_CAP_SQUARE + 0.5) {
+                float extra = step(JOINT_CAP_SQUARE, type) * lineWidth;
+                if (vertexNum < 0.5 || vertexNum > 2.5) {
+                    dy3 = dot(pos + base - pointB, forward) - extra;
+                } else {
+                    pos += forward * (expand + extra);
+                    dy3 = expand;
+                    if (capType >= CAP_BUTT) {
+                        dy2 -= expand + extra;
+                    }
+                }
+            }
+        } else if (type >= JOINT_CAP_ROUND && type < JOINT_CAP_ROUND + 1.5) {
+            if (inner > 0.5) {
+                dy = -dy;
+                inner = 0.0;
+            }
+            vec2 d2 = abs(dy) * forward;
+            if (vertexNum < 4.5) {
+                dy = -dy;
+                pos = dy * norm;
+            } else if (vertexNum < 5.5) {
+                pos = dy * norm;
+            } else if (vertexNum < 6.5) {
+                pos = dy * norm + d2;
+                vArc.x = abs(dy);
+            } else {
+                dy = -dy;
+                pos = dy * norm + d2;
+                vArc.x = abs(dy);
+            }
+            dy2 = 0.0;
+            vArc.y = dy;
+            vArc.z = 0.0;
+            vArc.w = lineWidth;
+            vType = 3.0;
+        } else if (abs(D) < 0.01) {
+            pos = dy * norm;
+        } else {
+            if (type >= ROUND && type < ROUND + 1.5) {
+                if (inner > 0.5) {
+                    dy = -dy;
+                    inner = 0.0;
+                }
+                if (vertexNum < 4.5) {
+                    pos = doBisect(norm, len, norm2, len2, -dy, 1.0);
+                } else if (vertexNum < 5.5) {
+                    pos = dy * norm;
+                } else if (vertexNum > 7.5) {
+                    pos = dy * norm2;
+                } else {
+                    pos = doBisect(norm, len, norm2, len2, dy, 0.0);
+                    float d2 = abs(dy);
+                    if (length(pos) > abs(dy) * 1.5) {
+                        if (vertexNum < 6.5) {
+                            pos.x = dy * norm.x - d2 * norm.y;
+                            pos.y = dy * norm.y + d2 * norm.x;
+                        } else {
+                            pos.x = dy * norm2.x + d2 * norm2.y;
+                            pos.y = dy * norm2.y - d2 * norm2.x;
+                        }
+                    }
+                }
+                vec2 norm3 = normalize(norm + norm2);
+
+                float sign = step(0.0, dy) * 2.0 - 1.0;
+                vArc.x = sign * dot(pos, norm3);
+                vArc.y = pos.x * norm3.y - pos.y * norm3.x;
+                vArc.z = dot(norm, norm3) * lineWidth;
+                vArc.w = lineWidth;
+
+                dy = -sign * dot(pos, norm);
+                dy2 = -sign * dot(pos, norm2);
+                dy3 = vArc.z - vArc.x;
+                vType = 3.0;
+            } else {
+                float hit = 0.0;
+                if (type >= BEVEL && type < BEVEL + 1.5) {
+                    if (dot(norm, norm2) > 0.0) {
+                        type = MITER;
+                    }
+                }
+
+                if (type >= MITER && type < MITER + 3.5) {
+                    if (inner > 0.5) {
+                        dy = -dy;
+                        inner = 0.0;
+                    }
+                    float sign = step(0.0, dy) * 2.0 - 1.0;
+                    pos = doBisect(norm, len, norm2, len2, dy, 0.0);
+                    if (length(pos) > abs(dy) * miterLimit) {
+                        type = BEVEL;
+                    } else {
+                        if (vertexNum < 4.5) {
+                            dy = -dy;
+                            pos = doBisect(norm, len, norm2, len2, dy, 1.0);
+                        } else if (vertexNum < 5.5) {
+                            pos = dy * norm;
+                        } else if (vertexNum > 6.5) {
+                            pos = dy * norm2;
+                        }
+                        vType = 1.0;
+                        dy = -sign * dot(pos, norm);
+                        dy2 = -sign * dot(pos, norm2);
+                        hit = 1.0;
+                    }
+                }
+                if (type >= BEVEL && type < BEVEL + 1.5) {
+                    if (inner > 0.5) {
+                        dy = -dy;
+                        inner = 0.0;
+                    }
+                    float d2 = abs(dy);
+                    vec2 pos3 = vec2(dy * norm.x - d2 * norm.y, dy * norm.y + d2 * norm.x);
+                    vec2 pos4 = vec2(dy * norm2.x + d2 * norm2.y, dy * norm2.y - d2 * norm2.x);
+                    if (vertexNum < 4.5) {
+                        pos = doBisect(norm, len, norm2, len2, -dy, 1.0);
+                    } else if (vertexNum < 5.5) {
+                        pos = dy * norm;
+                    } else if (vertexNum > 7.5) {
+                        pos = dy * norm2;
+                    } else {
+                        if (vertexNum < 6.5) {
+                            pos = pos3;
+                        } else {
+                            pos = pos4;
+                        }
+                    }
+                    vec2 norm3 = normalize(norm + norm2);
+                    float sign = step(0.0, dy) * 2.0 - 1.0;
+
+                    dy = -sign * dot(pos, norm);
+                    dy2 = -sign * dot(pos, norm2);
+                    dy3 = (-sign * dot(pos, norm3)) + lineWidth;
+                    vType = 4.0;
+                    hit = 1.0;
+                }
+                if (hit < 0.5) {
+                    gl_Position = vec4(0.0, 0.0, 0.0, 1.0);
+                    return;
+                }
+            }
+        }
+
+        pos += base;
+        vDistance = vec4(dy, dy2, dy3, lineWidth) * resolution;
+        vArc = vArc * resolution;
+    }
+
+    gl_Position = vec4((projectionMatrix * vec3(pos, 1.0)).xy, 0.0, 1.0);
+}`;
+
+    const plotFrag = `precision highp float;
+varying vec4 vDistance;
+varying vec4 vArc;
+varying float vType;
+uniform vec4 uColor;
+
+void main(void){
+    float alpha = 1.0;
+    float lineWidth = vDistance.w;
+    if (vType < 0.5) {
+        float left = max(vDistance.x - 0.5, -vDistance.w);
+        float right = min(vDistance.x + 0.5, vDistance.w);
+        float near = vDistance.y - 0.5;
+        float far = min(vDistance.y + 0.5, 0.0);
+        float top = vDistance.z - 0.5;
+        float bottom = min(vDistance.z + 0.5, 0.0);
+        alpha = max(right - left, 0.0) * max(bottom - top, 0.0) * max(far - near, 0.0);
+    } else if (vType < 1.5) {
+        float a1 = clamp(vDistance.x + 0.5 - lineWidth, 0.0, 1.0);
+        float a2 = clamp(vDistance.x + 0.5 + lineWidth, 0.0, 1.0);
+        float b1 = clamp(vDistance.y + 0.5 - lineWidth, 0.0, 1.0);
+        float b2 = clamp(vDistance.y + 0.5 + lineWidth, 0.0, 1.0);
+        alpha = a2 * b2 - a1 * b1;
+    } else if (vType < 2.5) {
+        alpha *= max(min(vDistance.x + 0.5, 1.0), 0.0);
+        alpha *= max(min(vDistance.y + 0.5, 1.0), 0.0);
+        alpha *= max(min(vDistance.z + 0.5, 1.0), 0.0);
+    } else if (vType < 3.5) {
+        float a1 = clamp(vDistance.x + 0.5 - lineWidth, 0.0, 1.0);
+        float a2 = clamp(vDistance.x + 0.5 + lineWidth, 0.0, 1.0);
+        float b1 = clamp(vDistance.y + 0.5 - lineWidth, 0.0, 1.0);
+        float b2 = clamp(vDistance.y + 0.5 + lineWidth, 0.0, 1.0);
+        float alpha_miter = a2 * b2 - a1 * b1;
+
+        float alpha_plane = max(min(vDistance.z + 0.5, 1.0), 0.0);
+
+        float d = length(vArc.xy);
+        float circle_hor = max(min(vArc.w, d + 0.5) - max(-vArc.w, d - 0.5), 0.0);
+        float circle_vert = min(vArc.w * 2.0, 1.0);
+        float alpha_circle = circle_hor * circle_vert;
+
+        alpha = min(alpha_miter, max(alpha_circle, alpha_plane));
+    } else {
+        float a1 = clamp(vDistance.x + 0.5 - lineWidth, 0.0, 1.0);
+        float a2 = clamp(vDistance.x + 0.5 + lineWidth, 0.0, 1.0);
+        float b1 = clamp(vDistance.y + 0.5 - lineWidth, 0.0, 1.0);
+        float b2 = clamp(vDistance.y + 0.5 + lineWidth, 0.0, 1.0);
+        alpha = a2 * b2 - a1 * b1;
+        alpha *= max(min(vDistance.z + 0.5, 1.0), 0.0);
+    }
+    gl_FragColor = uColor * alpha;
+}
+`;
+
+    class PlotShader extends mesh.MeshMaterial {
+        static __initStatic() {this._prog = null;}
+
+        static getProgram() {
+            if (!PlotShader._prog) {
+                PlotShader._prog = new core.Program(plotVert, plotFrag);
+            }
+            return PlotShader._prog;
+        }
+
+        constructor() {
+            super(core.Texture.WHITE, {
+                uniforms: {
+                    resolution: 1,
+                    expand: 1,
+                    styleLine: new Float32Array([1.0, 0.5]),
+                    miterLimit: 5.0,
+                },
+                program: PlotShader.getProgram()
+            });
+        }
+    } PlotShader.__initStatic();
+
+    function multIndex(indices, vertCount, instanceCount, support32 = true) {
+        const size = indices.length;
+        const ind = support32 ? new Uint32Array(size * instanceCount) : new Uint16Array(size * instanceCount);
+        for (let i = 0; i < instanceCount; i++) {
+            for (let j = 0; j < size; j++) {
+                ind[i * size + j] = indices[j] + vertCount * i;
+            }
+        }
+        return ind;
+    }
+
+    class PlotGeometry extends core.Geometry {
+        constructor(_static = false) {
+            super();PlotGeometry.prototype.__init.call(this);PlotGeometry.prototype.__init2.call(this);PlotGeometry.prototype.__init3.call(this);PlotGeometry.prototype.__init4.call(this);PlotGeometry.prototype.__init5.call(this);PlotGeometry.prototype.__init6.call(this);PlotGeometry.prototype.__init7.call(this);PlotGeometry.prototype.__init8.call(this);PlotGeometry.prototype.__init9.call(this);PlotGeometry.prototype.__init10.call(this);PlotGeometry.prototype.__init11.call(this);PlotGeometry.prototype.__init12.call(this);PlotGeometry.prototype.__init13.call(this);PlotGeometry.prototype.__init14.call(this);PlotGeometry.prototype.__init15.call(this);PlotGeometry.prototype.__init16.call(this);PlotGeometry.prototype.__init17.call(this);PlotGeometry.prototype.__init18.call(this);PlotGeometry.prototype.__init19.call(this);;
+            this.initGeom(_static);
+            this.reset();
+        }
+
+        __init() {this.joinStyle = graphics.LINE_JOIN.MITER;}
+        __init2() {this.capStyle = graphics.LINE_CAP.SQUARE;}
+
+        __init3() {this.lastLen = 0;}
+        __init4() {this.lastPointNum = 0;}
+        __init5() {this.lastPointData = 0;}
+        __init6() {this.updateId = 0;}
+        __init7() {this.points = [];}
+        __init8() {this._floatView = null;}
+        __init9() {this._u32View = null;}
+        __init10() {this._buffer = null;}
+        __init11() {this._quad = null;}
+        __init12() {this._indexBuffer = null;}
+        __init13() {this._vertexNums = null;}
+        __init14() {this.support32 = false;}
+
+        initGeom(_static) {
+            this._buffer = new core.Buffer(new Float32Array(0), _static, false);
+
+            this._vertexNums = new core.Buffer(new Float32Array([0, 1, 2, 3, 4, 5, 6, 7, 8]), true, false);
+
+            this._indexBuffer = new core.Buffer(new Uint16Array([0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7, 4, 7, 8]), true, true);
+
+            this.addAttribute('aPrev', this._buffer, 2, false, constants.TYPES.FLOAT, 3 * 4, 0 * 4, true)
+                .addAttribute('aPoint1', this._buffer, 2, false, constants.TYPES.FLOAT, 3 * 4, 3 * 4, true)
+                .addAttribute('aPoint2', this._buffer, 2, false, constants.TYPES.FLOAT, 3 * 4, 6 * 4, true)
+                .addAttribute('aNext', this._buffer, 2, false, constants.TYPES.FLOAT, 3 * 4, 9 * 4, true)
+                .addAttribute('aVertexJoint', this._buffer, 1, false, constants.TYPES.FLOAT, 3 * 4, 5 * 4, true)
+                .addAttribute('vertexNum', this._vertexNums, 1, false, constants.TYPES.FLOAT)
+                .addIndex(this._indexBuffer);
+        }
+
+        __init15() {this.stridePoints = 2;}
+        __init16() {this.strideFloats = 3;}
+        __init17() {this.strideBytes = 3 * 4;}
+
+        moveTo(x, y) {
+            const {points} = this;
+            points.push(x);
+            points.push(y);
+        }
+
+        lineTo(x, y) {
+            const {points} = this;
+            points.push(x);
+            points.push(y);
+        }
+
+
+        lineBy(dx, dy) {
+            const {points, stridePoints} = this;
+
+            const x = points[points.length - stridePoints];
+            const y = points[points.length - stridePoints + 1];
+
+            points.push(x + dx);
+            points.push(y + dy);
+        }
+
+        invalidate(pointNum = 0) {
+            this.lastPointNum = Math.min(pointNum, this.lastPointNum);
+            this.updateId++;
+        }
+
+        reset() {
+            if (this.lastLen > 0) {
+                this.clearBufferData();
+            }
+            this.updateId++;
+            this.lastLen = 0;
+            this.lastPointData = 0;
+            this.points.length = 0;
+            this.instanceCount = 0;
+        }
+
+        clearBufferData() {
+            const {points, strideBytes, stridePoints} = this;
+            this.lastPointNum = 0;
+            this.lastPointData = 0;
+            const arrayLen = Math.max(0, points.length / stridePoints + 3);
+            const arrBuf = new ArrayBuffer(strideBytes * arrayLen);
+            this.lastLen = points.length;
+            this._floatView = new Float32Array(arrBuf);
+            this._u32View = new Uint32Array(arrBuf);
+            this._buffer.update(arrBuf);
+        }
+
+        updateBuffer() {
+            const {points, stridePoints, strideFloats} = this;
+
+            if (this.lastLen > points.length) {
+                this.lastLen = -1;
+            }
+            if (this.lastLen < points.length
+                || this.lastPointNum < this.lastLen) { // TODO: partial upload
+                this.clearBufferData();
+            }
+
+            if (this.lastPointNum == this.lastLen) {
+                return;
+            }
+
+            const jointType = this.jointType();
+            const capType = this.capType();
+            let endJoint = capType;
+            if (capType === JOINT_TYPE.CAP_ROUND) {
+                endJoint = JOINT_TYPE.JOINT_CAP_ROUND;
+            }
+            if (capType === JOINT_TYPE.CAP_BUTT) {
+                endJoint = JOINT_TYPE.JOINT_CAP_BUTT;
+            }
+            if (capType === JOINT_TYPE.CAP_SQUARE) {
+                endJoint = JOINT_TYPE.JOINT_CAP_SQUARE;
+            }
+
+            const {_floatView, _u32View} = this;
+
+            if (this.lastPointNum > 0) {
+                this.lastPointNum--;
+            }
+            if (this.lastPointNum > 0) {
+                this.lastPointNum--;
+            }
+
+            this.lastPointData = Math.min(this.lastPointData, this.lastPointNum);
+            let j = (Math.round(this.lastPointNum / stridePoints) + 2) * strideFloats; //actually that's int division
+
+            for (let i = this.lastPointNum; i < points.length; i += stridePoints) {
+                _floatView[j++] = points[i];
+                _floatView[j++] = points[i + 1];
+                _floatView[j] = jointType;
+                if (i == 0 && capType !== JOINT_TYPE.CAP_ROUND) {
+                    _floatView[j] += capType;
+                }
+                if (i + stridePoints * 2 >= points.length) {
+                    _floatView[j] += endJoint - jointType;
+                } else if (i + stridePoints >= points.length) {
+                    _floatView[j] = 0;
+                }
+                j++;
+            }
+            _floatView[j++] = points[points.length - 4];
+            _floatView[j++] = points[points.length - 3];
+            _floatView[j++] = 0;
+            _floatView[0] = points[0];
+            _floatView[1] = points[1];
+            _floatView[2] = 0;
+            _floatView[3] = points[2];
+            _floatView[4] = points[3];
+            _floatView[5] = capType === JOINT_TYPE.CAP_ROUND ? capType : 0;
+
+            //TODO: update from first modified float
+            this._buffer.update();
+            this.instanceCount = Math.round(points.length / stridePoints);
+
+            this.lastPointNum = this.lastLen;
+            this.lastPointData = this.lastLen; // TODO: partial upload
+
+            if (this.legacyGeom) {
+                this.updateLegacy();
+            }
+        }
+
+        __init18() {this.legacyGeom = null;}
+        __init19() {this.legacyBuffer = null;}
+
+        initLegacy(support32) {
+            if (this.legacyGeom) {
+                return;
+            }
+            const ind = [0, 1, 2, 0, 2, 3];
+            this.support32 = support32;
+            this.legacyGeom = new core.Geometry();
+            this.legacyBuffer = new core.Buffer(new Float32Array(0), false, false);
+            this.legacyGeom.addAttribute('aPrev', this.legacyBuffer, 2, false, constants.TYPES.FLOAT)
+                .addAttribute('aPoint1', this.legacyBuffer, 2, false, constants.TYPES.FLOAT)
+                .addAttribute('aPoint2', this.legacyBuffer, 2, false, constants.TYPES.FLOAT)
+                .addAttribute('aNext', this.legacyBuffer, 2, false, constants.TYPES.FLOAT)
+                .addAttribute('aVertexJoint', this.legacyBuffer, 1, false, constants.TYPES.FLOAT)
+                .addAttribute('vertexNum', this.legacyBuffer, 1, false, constants.TYPES.FLOAT)
+                .addIndex(new core.Buffer(support32? new Uint32Array(ind): new Uint16Array(ind), false, true));
+        }
+
+        updateLegacy() {
+            const {legacyBuffer, _floatView, _u32View, strideFloats} = this;
+            const strideLegacy = 10;
+            const vcount = 9;
+            const instanceCount = (this._floatView.length / strideFloats - 3);
+            const legacyLen = instanceCount * strideLegacy * vcount;
+            if ((legacyBuffer.data ).length !== legacyLen) {
+                legacyBuffer.data = new Float32Array(legacyLen);
+                this.legacyGeom.getIndex().update(multIndex(this._indexBuffer.data , vcount, instanceCount, this.support32));
+            }
+            const floats = legacyBuffer.data ;
+            for (let i = 0, j = 0; j < legacyLen; i += strideFloats) {
+                for (let k = 0; k < vcount; k++) {
+                    floats[j++] = _floatView[i];
+                    floats[j++] = _floatView[i + 1];
+                    floats[j++] = _floatView[i + 3];
+                    floats[j++] = _floatView[i + 4];
+                    floats[j++] = _floatView[i + 6];
+                    floats[j++] = _floatView[i + 7];
+                    floats[j++] = _floatView[i + 9];
+                    floats[j++] = _floatView[i + 10];
+                    floats[j++] = _floatView[i + 5];
+                    floats[j++] = k;
+                }
+            }
+        }
+
+        /**
+         * copied from graphics-smooth
+         */
+         capType() {
+            let cap;
+
+            switch (this.capStyle) {
+                case graphics.LINE_CAP.SQUARE:
+                    cap = JOINT_TYPE.CAP_SQUARE;
+                    break;
+                case graphics.LINE_CAP.ROUND:
+                    cap = JOINT_TYPE.CAP_ROUND;
+                    break;
+                default:
+                    cap = JOINT_TYPE.CAP_BUTT;
+                    break;
+            }
+
+            return cap;
+        }
+
+        /**
+         * copied from graphics-smooth
+         */
+         goodJointType() {
+            let joint;
+
+            switch (this.joinStyle) {
+                case graphics.LINE_JOIN.BEVEL:
+                    joint = JOINT_TYPE.JOINT_BEVEL;
+                    break;
+                case graphics.LINE_JOIN.ROUND:
+                    joint = JOINT_TYPE.JOINT_ROUND;
+                    break;
+                default:
+                    joint = JOINT_TYPE.JOINT_MITER + 3;
+                    break;
+            }
+
+            return joint;
+        }
+
+        /**
+         * copied from graphics-smooth
+         */
+         jointType() {
+            let joint;
+
+            switch (this.joinStyle) {
+                case graphics.LINE_JOIN.BEVEL:
+                    joint = JOINT_TYPE.JOINT_BEVEL;
+                    break;
+                case graphics.LINE_JOIN.ROUND:
+                    joint = JOINT_TYPE.JOINT_ROUND;
+                    break;
+                default:
+                    joint = JOINT_TYPE.JOINT_MITER;
+                    break;
+            }
+
+            return joint;
+        }
+    }
+
+
+
+
+
+
+
+
+    class Plot extends mesh.Mesh {
+        constructor(options) {
+            const geometry = new PlotGeometry();
+            const shader = new PlotShader();
+            if (options) {
+                if (options.lineWidth !== undefined) {
+                    shader.uniforms.styleLine[0] = options.lineWidth;
+                }
+                if (options.nativeLineWidth !== undefined) {
+                    shader.uniforms.styleLine[0] = options.nativeLineWidth;
+                }
+                if (options.joinStyle !== undefined) {
+                    geometry.joinStyle = options.joinStyle;
+                }
+                if (options.capStyle !== undefined) {
+                    geometry.capStyle = options.capStyle;
+                }
+            }
+
+            super(geometry, shader);
+        }
+
+        moveTo(x, y) {
+            const geometry = this.geometry ;
+            geometry.moveTo(x, y);
+        }
+
+        lineTo(x, y) {
+            const geometry = this.geometry ;
+            geometry.lineTo(x, y);
+        }
+
+        lineBy(x, y) {
+            const geometry = this.geometry ;
+            geometry.lineBy(x, y);
+        }
+
+        lineStyle(width, nativeWidth, joinStyle, capStyle) {
+            const param = width ;
+            if (param instanceof Object) {
+                this.gLineStyle(param);
+                return;
+            }
+
+            const geometry = this.geometry ;
+            if (width !== undefined) {
+                this.shader.uniforms.styleLine[0] = width;
+            }
+            if (nativeWidth !== undefined) {
+                this.shader.uniforms.styleLine[0] = -nativeWidth;
+            }
+            if (joinStyle !== undefined) {
+                geometry.joinStyle = joinStyle;
+            }
+            if (capStyle !== undefined) {
+                geometry.capStyle = capStyle;
+            }
+            geometry.invalidate();
+        }
+
+        gLineStyle(obj) {
+            const geometry = this.geometry ;
+            if (obj.width !== undefined) {
+                this.shader.uniforms.styleLine[0] = obj.width;
+            }
+            if (obj.color !== undefined) {
+                this.tint = obj.color;
+            }
+            if (obj.join !== undefined) {
+                geometry.joinStyle = obj.join;
+            }
+            if (obj.cap !== undefined) {
+                geometry.capStyle = obj.cap;
+            }
+        }
+
+        clear() {
+            (this.geometry ).reset();
+        }
+
+        _renderDefault(renderer) {
+            const geometry = this.geometry ;
+
+            if (geometry.points.length < 4) {
+                return;
+            }
+
+            const useLegacy = !renderer.geometry.hasInstance;
+            if (useLegacy) {
+                geometry.initLegacy(renderer.context.supports.uint32Indices);
+            }
+            geometry.updateBuffer();
+            if (geometry.instanceCount === 0) {
+                return;
+            }
+            const rt = renderer.renderTexture.current;
+            const multisample = rt ? rt.framebuffer.multisample > 1 : renderer.options.antialias;
+            const resolution = this.shader.uniforms.resolution = (rt ? rt.baseTexture.resolution : renderer.resolution);
+            this.shader.uniforms.expand = (multisample ? 2 : 1) / resolution;
+
+            if (useLegacy) {
+                // hacky!
+                (this ).geometry = geometry.legacyGeom;
+                super._renderDefault(renderer);
+                (this ).geometry = geometry;
+                return;
+            }
+            super._renderDefault(renderer);
+        }
+
+        _renderCanvas(renderer) {
+            const {points, stridePoints, capStyle, joinStyle} = this.geometry ;
+            const {context} = renderer;
+            const len = points.length;
+            if (len < 2) {
+                return;
+            }
+            const wt = this.transform.worldTransform;
+            renderer.setContextTransform(wt);
+
+            const scale = Math.sqrt(wt.a * wt.a + wt.b * wt.b);
+            context.lineWidth = this.shader.uniforms.styleLine[0] + this.shader.uniforms.styleLine[1] / scale;
+
+            context.strokeStyle = utils.hex2string(this.tint);
+            context.globalAlpha = this.worldAlpha;
+            context.lineCap = capStyle;
+            context.lineJoin = joinStyle;
+
+            context.beginPath();
+            context.moveTo(points[0], points[1]);
+            for (let i = 2; i < points.length; i += stridePoints) {
+                context.lineTo(points[i], points[i + 1]);
+            }
+            context.stroke();
+            context.beginPath();
+
+            context.globalAlpha = 1.0;
+        }
+    }
+
+    const gradVert = `
+attribute vec2 aVertexPosition;
+
+uniform mat3 projectionMatrix;
+uniform mat3 translationMatrix;
+uniform vec2 rangeY;
+
+varying float vOrdinate;
+
+void main(void)
+{
+vec2 pos = (translationMatrix * vec3(aVertexPosition, 1.0)).xy;
+if (pos.y > rangeY.y) {
+    pos.y = rangeY.y;
+}
+gl_Position = vec4((projectionMatrix * vec3(pos, 1.0)).xy, 0.0, 1.0);
+vOrdinate = pos.y;
+}`;
+    const gradFrag = `
+varying float vOrdinate;
+
+uniform vec4 colorTop;
+uniform vec4 colorBottom;
+uniform vec4 uColor;
+uniform vec2 rangeY2;
+
+void main(void)
+{
+vec4 color = colorTop;
+if (vOrdinate > rangeY2.x) {
+    if (vOrdinate >= rangeY2.y) {
+        color = colorBottom;
+    } else {
+        color = colorTop + (colorBottom - colorTop) * (vOrdinate - rangeY2.x) / (rangeY2.y - rangeY2.x);
+    }
+}
+
+color.rgb *= color.a;
+gl_FragColor = color * uColor;
+}
+`;
+
+    class PlotGradientShader extends mesh.MeshMaterial {
+        static __initStatic() {this._prog = null;}
+
+        static getProgram() {
+            if (!PlotGradientShader._prog) {
+                PlotGradientShader._prog = new core.Program(gradVert, gradFrag);
+            }
+            return PlotGradientShader._prog;
+        }
+
+        constructor() {
+            const rangeY = new Float32Array(2);
+            super(core.Texture.WHITE, {
+                uniforms: {
+                    resolution: 1,
+                    colorTop: new Float32Array([1, 1, 1, 1]),
+                    colorBottom: new Float32Array([1, 1, 1, 1]),
+                    rangeY: rangeY,
+                    rangeY2: rangeY,
+                },
+                program: PlotGradientShader.getProgram()
+            });
+        }
+    } PlotGradientShader.__initStatic();
+
+    class PlotGradientGeometry extends core.Geometry {
+        constructor(_static = false) {
+            super();PlotGradientGeometry.prototype.__init.call(this);PlotGradientGeometry.prototype.__init2.call(this);PlotGradientGeometry.prototype.__init3.call(this);PlotGradientGeometry.prototype.__init4.call(this);PlotGradientGeometry.prototype.__init5.call(this);PlotGradientGeometry.prototype.__init6.call(this);PlotGradientGeometry.prototype.__init7.call(this);PlotGradientGeometry.prototype.__init8.call(this);PlotGradientGeometry.prototype.__init9.call(this);;
+            this.initGeom(_static);
+            this.reset();
+        }
+
+        __init() {this.lastLen = 0;}
+        __init2() {this.lastPointNum = 0;}
+        __init3() {this.lastPointData = 0;}
+        __init4() {this.points = [];}
+        __init5() {this._floatView = null;}
+        __init6() {this._buffer = null;}
+
+        initGeom(_static) {
+            this._buffer = new core.Buffer(new Float32Array(0), _static, false);
+
+            this.addAttribute('aVertexPosition', this._buffer, 2, false, constants.TYPES.FLOAT);
+        }
+
+        __init7() {this.stridePoints = 2;}
+        __init8() {this.strideFloats = 2 * 6;}
+        __init9() {this.strideBytes = 8 * 6;}
+
+        moveTo(x, y) {
+            const {points} = this;
+            points.push(x);
+            points.push(y);
+        }
+
+        lineTo(x, y) {
+            const {points} = this;
+            points.push(x);
+            points.push(y);
+        }
+
+        invalidate(pointNum = 0) {
+            this.lastPointNum = Math.min(pointNum, this.lastPointNum);
+        }
+
+        reset() {
+            if (this.lastLen > 0) {
+                this.clearBufferData();
+            }
+            this.lastLen = 0;
+            this.lastPointData = 0;
+            this.points.length = 0;
+        }
+
+        clearBufferData() {
+            const {points, strideFloats, stridePoints} = this;
+            this.lastPointNum = 0;
+            this.lastPointData = 0;
+            const arrayLen = Math.max(0, points.length / stridePoints - 1);
+            this._floatView = new Float32Array(strideFloats * arrayLen);
+            this._buffer.update(this._floatView);
+            this.lastLen = points.length;
+        }
+
+        updateBuffer() {
+            const {points, stridePoints, strideFloats} = this;
+
+            if (this.lastLen > points.length) {
+                this.lastLen = -1;
+            }
+            if (this.lastLen < points.length
+                || this.lastPointNum < this.lastLen) { // TODO: partial upload
+                this.clearBufferData();
+            }
+
+            if (this.lastPointNum == this.lastLen) {
+                return;
+            }
+
+            const {_floatView} = this;
+            this.lastPointData = Math.min(this.lastPointData, this.lastPointNum);
+            let j = Math.round(this.lastPointNum * strideFloats / stridePoints);
+            for (let i = this.lastPointNum; i < points.length - stridePoints; i += stridePoints) {
+                const next = i + stridePoints;
+
+                const x = points[i], y = points[i + 1], x2 = points[next], y2 = points[next + 1];
+
+                const bottomLine = 10000.0;
+
+                _floatView[j++] = x;
+                _floatView[j++] = y;
+                _floatView[j++] = x2;
+                _floatView[j++] = y2;
+                _floatView[j++] = x2;
+                _floatView[j++] = bottomLine;
+                _floatView[j++] = x;
+                _floatView[j++] = y;
+                _floatView[j++] = x2;
+                _floatView[j++] = bottomLine;
+                _floatView[j++] = x;
+                _floatView[j++] = bottomLine;
+            }
+            this._buffer.update();
+
+            this.lastPointNum = this.lastLen;
+            this.lastPointData = this.lastLen; // TODO: partial upload
+        }
+    }
+
+    class PlotGradient extends mesh.Mesh {
+        constructor() {
+            super(new PlotGradientGeometry(), new PlotGradientShader());PlotGradient.prototype.__init10.call(this);PlotGradient.prototype.__init11.call(this);;
+        }
+
+        get coordTop() {
+            return this.shader.uniforms.rangeY[0];
+        }
+
+        set coordTop(value) {
+            this.shader.uniforms.rangeY[0] = value;
+        }
+
+        get coordBottom() {
+            return this.shader.uniforms.rangeY[1];
+        }
+
+        set coordBottom(value) {
+            this.shader.uniforms.rangeY[1] = value;
+        }
+
+        get alphaTop() {
+            return this.shader.uniforms.colorTop[3];
+        }
+
+        set alphaTop(value) {
+            this.shader.uniforms.colorTop[3] = value;
+        }
+
+        get alphaBottom() {
+            return this.shader.uniforms.colorBottom[3];
+        }
+
+        set alphaBottom(value) {
+            this.shader.uniforms.colorBottom[3] = value;
+        }
+
+        get colorBottom() {
+            return utils.rgb2hex(this.shader.uniforms.colorBottom);
+        }
+
+        set colorBottom(value) {
+            utils.hex2rgb(value, this.shader.uniforms.colorBottom);
+        }
+
+        get colorTop() {
+            return utils.rgb2hex(this.shader.uniforms.colorTop);
+        }
+
+        set colorTop(value) {
+            utils.hex2rgb(value, this.shader.uniforms.colorTop);
+        }
+
+        __init10() {this.masterPlot = null;}
+        __init11() {this.plotUpdateId = -1;}
+
+        clear() {
+            if (!this.masterPlot) {
+                (this.geometry ).reset();
+            }
+        }
+
+        moveTo(x, y) {
+            this.lineTo(x, y);
+        }
+
+        lineTo(x, y) {
+            if (!this.masterPlot) {
+                (this.geometry ).lineTo(x, y);
+            }
+        }
+
+        _render(renderer) {
+            const geom = this.geometry ;
+            if (this.masterPlot) {
+                const plotGeom = this.masterPlot.geometry ;
+                if (this.plotUpdateId !== plotGeom.updateId) {
+                    this.plotUpdateId = plotGeom.updateId;
+                    geom.points = plotGeom.points;
+                    geom.invalidate();
+                }
+            }
+            geom.updateBuffer();
+
+            this._renderDefault(renderer);
+        }
+
+        _renderCanvas(renderer) {
+            const geom = this.geometry ;
+            // let points = geom.points;
+            // if (this.masterPlot) {
+            //     const plotGeom = this.masterPlot.geometry as PlotGeometry;
+            //     if (this.plotUpdateId !== plotGeom.updateId) {
+            //         this.plotUpdateId = plotGeom.updateId
+            //         geom.points = plotGeom.points;
+            //     }
+            // }
+            //
+            //
+            // const {points, stridePoints} = this.geometry as BarsGeometry;
+            // const {context} = renderer;
+            // const len = points.length;
+            // if (len < 2) {
+            //     return;
+            // }
+            // const wt = this.transform.worldTransform;
+            // renderer.setContextTransform(wt);
+            //
+            // const scale = Math.sqrt(wt.a * wt.a + wt.b * wt.b);
+            // context.lineWidth = this.shader.uniforms.lineWidth[0] + this.shader.uniforms.lineWidth[1] / scale;
+            //
+            // context.strokeStyle = utils.hex2string(this.tint);
+            // context.globalAlpha = this.worldAlpha;
+            //
+            // context.beginPath();
+            // context.moveTo(points[0], points[1]);
+            // for (let i = 2; i < points.length; i += stridePoints) {
+            //     context.lineTo(points[i], points[i + 1]);
+            // }
+            // context.stroke();
+            // context.beginPath();
+            //
+            // context.globalAlpha = 1.0;
+        }
+    }
+
+    exports.TARGET_TYPE = void 0; (function (TARGET_TYPE) {
+    	const NONE = 'none'; TARGET_TYPE["NONE"] = NONE;
+    	const CHART = 'chart'; TARGET_TYPE["CHART"] = CHART;
+    	const LABELS = 'labels'; TARGET_TYPE["LABELS"] = LABELS;
+    	const GRID = 'grid'; TARGET_TYPE["GRID"] = GRID;
+    })(exports.TARGET_TYPE || (exports.TARGET_TYPE = {}));
+
+    exports.BACKEND_TYPE = void 0; (function (BACKEND_TYPE) {
+    	const NONE = 'none'; BACKEND_TYPE["NONE"] = NONE;
+    	const PIXI = 'pixi'; BACKEND_TYPE["PIXI"] = PIXI;
+    })(exports.BACKEND_TYPE || (exports.BACKEND_TYPE = {}));
+
+    'use strict';
+
+    var colorName = {
+    	"aliceblue": [240, 248, 255],
+    	"antiquewhite": [250, 235, 215],
+    	"aqua": [0, 255, 255],
+    	"aquamarine": [127, 255, 212],
+    	"azure": [240, 255, 255],
+    	"beige": [245, 245, 220],
+    	"bisque": [255, 228, 196],
+    	"black": [0, 0, 0],
+    	"blanchedalmond": [255, 235, 205],
+    	"blue": [0, 0, 255],
+    	"blueviolet": [138, 43, 226],
+    	"brown": [165, 42, 42],
+    	"burlywood": [222, 184, 135],
+    	"cadetblue": [95, 158, 160],
+    	"chartreuse": [127, 255, 0],
+    	"chocolate": [210, 105, 30],
+    	"coral": [255, 127, 80],
+    	"cornflowerblue": [100, 149, 237],
+    	"cornsilk": [255, 248, 220],
+    	"crimson": [220, 20, 60],
+    	"cyan": [0, 255, 255],
+    	"darkblue": [0, 0, 139],
+    	"darkcyan": [0, 139, 139],
+    	"darkgoldenrod": [184, 134, 11],
+    	"darkgray": [169, 169, 169],
+    	"darkgreen": [0, 100, 0],
+    	"darkgrey": [169, 169, 169],
+    	"darkkhaki": [189, 183, 107],
+    	"darkmagenta": [139, 0, 139],
+    	"darkolivegreen": [85, 107, 47],
+    	"darkorange": [255, 140, 0],
+    	"darkorchid": [153, 50, 204],
+    	"darkred": [139, 0, 0],
+    	"darksalmon": [233, 150, 122],
+    	"darkseagreen": [143, 188, 143],
+    	"darkslateblue": [72, 61, 139],
+    	"darkslategray": [47, 79, 79],
+    	"darkslategrey": [47, 79, 79],
+    	"darkturquoise": [0, 206, 209],
+    	"darkviolet": [148, 0, 211],
+    	"deeppink": [255, 20, 147],
+    	"deepskyblue": [0, 191, 255],
+    	"dimgray": [105, 105, 105],
+    	"dimgrey": [105, 105, 105],
+    	"dodgerblue": [30, 144, 255],
+    	"firebrick": [178, 34, 34],
+    	"floralwhite": [255, 250, 240],
+    	"forestgreen": [34, 139, 34],
+    	"fuchsia": [255, 0, 255],
+    	"gainsboro": [220, 220, 220],
+    	"ghostwhite": [248, 248, 255],
+    	"gold": [255, 215, 0],
+    	"goldenrod": [218, 165, 32],
+    	"gray": [128, 128, 128],
+    	"green": [0, 128, 0],
+    	"greenyellow": [173, 255, 47],
+    	"grey": [128, 128, 128],
+    	"honeydew": [240, 255, 240],
+    	"hotpink": [255, 105, 180],
+    	"indianred": [205, 92, 92],
+    	"indigo": [75, 0, 130],
+    	"ivory": [255, 255, 240],
+    	"khaki": [240, 230, 140],
+    	"lavender": [230, 230, 250],
+    	"lavenderblush": [255, 240, 245],
+    	"lawngreen": [124, 252, 0],
+    	"lemonchiffon": [255, 250, 205],
+    	"lightblue": [173, 216, 230],
+    	"lightcoral": [240, 128, 128],
+    	"lightcyan": [224, 255, 255],
+    	"lightgoldenrodyellow": [250, 250, 210],
+    	"lightgray": [211, 211, 211],
+    	"lightgreen": [144, 238, 144],
+    	"lightgrey": [211, 211, 211],
+    	"lightpink": [255, 182, 193],
+    	"lightsalmon": [255, 160, 122],
+    	"lightseagreen": [32, 178, 170],
+    	"lightskyblue": [135, 206, 250],
+    	"lightslategray": [119, 136, 153],
+    	"lightslategrey": [119, 136, 153],
+    	"lightsteelblue": [176, 196, 222],
+    	"lightyellow": [255, 255, 224],
+    	"lime": [0, 255, 0],
+    	"limegreen": [50, 205, 50],
+    	"linen": [250, 240, 230],
+    	"magenta": [255, 0, 255],
+    	"maroon": [128, 0, 0],
+    	"mediumaquamarine": [102, 205, 170],
+    	"mediumblue": [0, 0, 205],
+    	"mediumorchid": [186, 85, 211],
+    	"mediumpurple": [147, 112, 219],
+    	"mediumseagreen": [60, 179, 113],
+    	"mediumslateblue": [123, 104, 238],
+    	"mediumspringgreen": [0, 250, 154],
+    	"mediumturquoise": [72, 209, 204],
+    	"mediumvioletred": [199, 21, 133],
+    	"midnightblue": [25, 25, 112],
+    	"mintcream": [245, 255, 250],
+    	"mistyrose": [255, 228, 225],
+    	"moccasin": [255, 228, 181],
+    	"navajowhite": [255, 222, 173],
+    	"navy": [0, 0, 128],
+    	"oldlace": [253, 245, 230],
+    	"olive": [128, 128, 0],
+    	"olivedrab": [107, 142, 35],
+    	"orange": [255, 165, 0],
+    	"orangered": [255, 69, 0],
+    	"orchid": [218, 112, 214],
+    	"palegoldenrod": [238, 232, 170],
+    	"palegreen": [152, 251, 152],
+    	"paleturquoise": [175, 238, 238],
+    	"palevioletred": [219, 112, 147],
+    	"papayawhip": [255, 239, 213],
+    	"peachpuff": [255, 218, 185],
+    	"peru": [205, 133, 63],
+    	"pink": [255, 192, 203],
+    	"plum": [221, 160, 221],
+    	"powderblue": [176, 224, 230],
+    	"purple": [128, 0, 128],
+    	"rebeccapurple": [102, 51, 153],
+    	"red": [255, 0, 0],
+    	"rosybrown": [188, 143, 143],
+    	"royalblue": [65, 105, 225],
+    	"saddlebrown": [139, 69, 19],
+    	"salmon": [250, 128, 114],
+    	"sandybrown": [244, 164, 96],
+    	"seagreen": [46, 139, 87],
+    	"seashell": [255, 245, 238],
+    	"sienna": [160, 82, 45],
+    	"silver": [192, 192, 192],
+    	"skyblue": [135, 206, 235],
+    	"slateblue": [106, 90, 205],
+    	"slategray": [112, 128, 144],
+    	"slategrey": [112, 128, 144],
+    	"snow": [255, 250, 250],
+    	"springgreen": [0, 255, 127],
+    	"steelblue": [70, 130, 180],
+    	"tan": [210, 180, 140],
+    	"teal": [0, 128, 128],
+    	"thistle": [216, 191, 216],
+    	"tomato": [255, 99, 71],
+    	"turquoise": [64, 224, 208],
+    	"violet": [238, 130, 238],
+    	"wheat": [245, 222, 179],
+    	"white": [255, 255, 255],
+    	"whitesmoke": [245, 245, 245],
+    	"yellow": [255, 255, 0],
+    	"yellowgreen": [154, 205, 50]
+    };
+
+    /**
+     * @module color-parse
+     */
+
+    'use strict';
+
+
+
+    var colorParse = parse;
+
+    /**
+     * Base hues
+     * http://dev.w3.org/csswg/css-color/#typedef-named-hue
+     */
+    //FIXME: use external hue detector
+    var baseHues = {
+    	red: 0,
+    	orange: 60,
+    	yellow: 120,
+    	green: 180,
+    	blue: 240,
+    	purple: 300
+    };
+
+    /**
+     * Parse color from the string passed
+     *
+     * @return {Object} A space indicator `space`, an array `values` and `alpha`
+     */
+    function parse (cstr) {
+    	var m, parts = [], alpha = 1, space;
+
+    	if (typeof cstr === 'string') {
+    		//keyword
+    		if (colorName[cstr]) {
+    			parts = colorName[cstr].slice();
+    			space = 'rgb';
+    		}
+
+    		//reserved words
+    		else if (cstr === 'transparent') {
+    			alpha = 0;
+    			space = 'rgb';
+    			parts = [0,0,0];
+    		}
+
+    		//hex
+    		else if (/^#[A-Fa-f0-9]+$/.test(cstr)) {
+    			var base = cstr.slice(1);
+    			var size = base.length;
+    			var isShort = size <= 4;
+    			alpha = 1;
+
+    			if (isShort) {
+    				parts = [
+    					parseInt(base[0] + base[0], 16),
+    					parseInt(base[1] + base[1], 16),
+    					parseInt(base[2] + base[2], 16)
+    				];
+    				if (size === 4) {
+    					alpha = parseInt(base[3] + base[3], 16) / 255;
+    				}
+    			}
+    			else {
+    				parts = [
+    					parseInt(base[0] + base[1], 16),
+    					parseInt(base[2] + base[3], 16),
+    					parseInt(base[4] + base[5], 16)
+    				];
+    				if (size === 8) {
+    					alpha = parseInt(base[6] + base[7], 16) / 255;
+    				}
+    			}
+
+    			if (!parts[0]) parts[0] = 0;
+    			if (!parts[1]) parts[1] = 0;
+    			if (!parts[2]) parts[2] = 0;
+
+    			space = 'rgb';
+    		}
+
+    		//color space
+    		else if (m = /^((?:rgb|hs[lvb]|hwb|cmyk?|xy[zy]|gray|lab|lchu?v?|[ly]uv|lms)a?)\s*\(([^\)]*)\)/.exec(cstr)) {
+    			var name = m[1];
+    			var isRGB = name === 'rgb';
+    			var base = name.replace(/a$/, '');
+    			space = base;
+    			var size = base === 'cmyk' ? 4 : base === 'gray' ? 1 : 3;
+    			parts = m[2].trim()
+    				.split(/\s*[,\/]\s*|\s+/)
+    				.map(function (x, i) {
+    					//<percentage>
+    					if (/%$/.test(x)) {
+    						//alpha
+    						if (i === size)	return parseFloat(x) / 100
+    						//rgb
+    						if (base === 'rgb') return parseFloat(x) * 255 / 100
+    						return parseFloat(x)
+    					}
+    					//hue
+    					else if (base[i] === 'h') {
+    						//<deg>
+    						if (/deg$/.test(x)) {
+    							return parseFloat(x)
+    						}
+    						//<base-hue>
+    						else if (baseHues[x] !== undefined) {
+    							return baseHues[x]
+    						}
+    					}
+    					return parseFloat(x)
+    				});
+
+    			if (name === base) parts.push(1);
+    			alpha = (isRGB) ? 1 : (parts[size] === undefined) ? 1 : parts[size];
+    			parts = parts.slice(0, size);
+    		}
+
+    		//named channels case
+    		else if (cstr.length > 10 && /[0-9](?:\s|\/)/.test(cstr)) {
+    			parts = cstr.match(/([0-9]+)/g).map(function (value) {
+    				return parseFloat(value)
+    			});
+
+    			space = cstr.match(/([a-z])/ig).join('').toLowerCase();
+    		}
+    	}
+
+    	//numeric case
+    	else if (!isNaN(cstr)) {
+    		space = 'rgb';
+    		parts = [cstr >>> 16, (cstr & 0x00ff00) >>> 8, cstr & 0x0000ff];
+    	}
+
+    	//array-like
+    	else if (Array.isArray(cstr) || cstr.length) {
+    		parts = [cstr[0], cstr[1], cstr[2]];
+    		space = 'rgb';
+    		alpha = cstr.length === 4 ? cstr[3] : 1;
+    	}
+
+    	//object case - detects css cases of rgb and hsl
+    	else if (cstr instanceof Object) {
+    		if (cstr.r != null || cstr.red != null || cstr.R != null) {
+    			space = 'rgb';
+    			parts = [
+    				cstr.r || cstr.red || cstr.R || 0,
+    				cstr.g || cstr.green || cstr.G || 0,
+    				cstr.b || cstr.blue || cstr.B || 0
+    			];
+    		}
+    		else {
+    			space = 'hsl';
+    			parts = [
+    				cstr.h || cstr.hue || cstr.H || 0,
+    				cstr.s || cstr.saturation || cstr.S || 0,
+    				cstr.l || cstr.lightness || cstr.L || cstr.b || cstr.brightness
+    			];
+    		}
+
+    		alpha = cstr.a || cstr.alpha || cstr.opacity || 1;
+
+    		if (cstr.opacity != null) alpha /= 100;
+    	}
+
+    	return {
+    		space: space,
+    		values: parts,
+    		alpha: alpha
+    	}
+    }
+
+    const FIELDS = ['fill', 'stroke'];
+
+    /**
+     * Convert CSS style color onto array [r, g, b, a]
+     * @param {IChartStyle} style
+     */
+    function parseStyle (style) {
+        const parsed = {...style};
+
+        for(let key of FIELDS) {
+            const orig = (style)[key];
+            // default
+            parsed[key] = [0,0,0,1];
+
+            if (orig == null) {
+                continue;
+            }
+
+            // decode HEX and strings
+            if (typeof orig === "string" || typeof orig === 'number') {
+                const color = colorParse(orig);
+
+                if (color && color.space && color.space.indexOf('rgb') !== 0) {
+                    throw new Error('Unknown style:' + orig);
+                }
+
+                if (color) {
+                    parsed[key] = [
+                        color.values[0] / 0xff,
+                        color.values[1] / 0xff,
+                        color.values[2] / 0xff,
+                        color.alpha];
+                }
+                // maybe array
+            } else if(orig && orig.length === 4) {
+                parsed[key] = orig;
+            }
+        }
+
+        return parsed;
+    }
+
+    class BaseDrawer {
+         static  __initStatic() {this.BACKEND_TYPE = exports.BACKEND_TYPE.NONE;}
+         static  __initStatic2() {this.TARGET_TYPE = exports.TARGET_TYPE.NONE;}
+         static  __initStatic3() {this.CHART_TYPE = exports.CHART_TYPE.LINE;}
+
+         get backendType() {
+            return  (this.constructor).BACKEND_TYPE;
+        }
+
+         get targetType() {
+            return  (this.constructor).TARGET_TYPE;
+        }
+
+         get chartType() {
+            return  (this.constructor).CHART_TYPE;
+        }
+
+        constructor (
+              chart
+        ) {;this.chart = chart;
+            this.link();
+        }
+
+        /**
+         * Link for watching a chart upadtes
+         * @protected
+         */
+         link() {
+            this.unlink();
+
+            this.chart.on(exports.CHART_EVENTS.UPDATE, this.update, this);
+            this.chart.on(exports.CHART_EVENTS.DESTROY, this.reset, this);
+        }
+        /**
+         * Unlink from chart updates watchings
+         * @protected
+         */
+
+         unlink() {
+            this.chart.off(exports.CHART_EVENTS.UPDATE, this.update, this);
+            this.chart.off(exports.CHART_EVENTS.DESTROY, this.reset, this);
+        }
+
+         update() {
+
+        }
+
+         reset() {
+
+        }
+
+         getParsedStyle() {
+            return parseStyle(this.chart.options.style);
+        }
+
+        /**
+         * Fit drawer to drawable data
+         */
+         fit () {
+
+        }
+    } BaseDrawer.__initStatic(); BaseDrawer.__initStatic2(); BaseDrawer.__initStatic3();
+
+    class BasePIXIDrawer extends BaseDrawer {
+    	 static  __initStatic() {this.BACKEND_TYPE = exports.BACKEND_TYPE.PIXI;}
+    	
+    } BasePIXIDrawer.__initStatic();
+
+    class LineDrawer extends BasePIXIDrawer {constructor(...args) { super(...args); LineDrawer.prototype.__init.call(this);LineDrawer.prototype.__init2.call(this);LineDrawer.prototype.__init3.call(this); }
+         static  __initStatic() {this.CHART_TYPE = exports.CHART_TYPE.LINE;}
+         static  __initStatic2() {this.TARGET_TYPE = exports.TARGET_TYPE.CHART;}
+
+         __init() {this._lastDirtyId = 0;}
+         __init2() {this._dirtyId = -1;}
+
+          __init3() {this.node = new Plot(null);}
+        
+
+        /**
+         *
+         * @param force - Update any case, no check a alpha === 0
+         */
+         update(force = false) {
+            const node = this.node;
+            const {
+                fromX, toX
+            } = this.chart.range;
+
+            const {
+                dataProvider,
+                viewport
+            } = this.chart;
+
+            const style = this.getParsedStyle();
+
+            if (!force && (style.stroke)[3] === 0) {
+                node.alpha = 0;
+                return;
+            }
+
+            node.clear();
+
+            this.lastDrawedFetch = dataProvider.fetch();
+
+            const {
+                data,
+                dataBounds
+            } = this.lastDrawedFetch;
+
+            const dataWidth = dataBounds.toX - dataBounds.fromX;
+            const dataHeight = dataBounds.toY - dataBounds.fromY;
+
+            node.lineStyle(style.thickness || 2, void 0, style.lineJoint );
+
+            node.tint = utils.rgb2hex(style.stroke );
+            node.alpha = ( style.stroke)[3];
+
+            utils.hex2rgb(0xffffff, node.shader.uniforms.uGeomColor);
+
+            for (let i = 0; i < data.length; i ++) {
+                const x = data[i][0];// * width / dataWidth;
+                const y = dataHeight - data[i][1];// * height / dataHeight; // flip
+
+                if (i === 0) {
+                    node.moveTo(x, y);
+                } else {
+                    node.lineTo(x, y);
+                }
+            }
+
+        }
+
+        reset() {
+            this.node.clear();
+        }
+
+        fit() {
+
+        }
+    } LineDrawer.__initStatic(); LineDrawer.__initStatic2();
+
+    class AreaDrawer extends BasePIXIDrawer {
+         static  __initStatic() {this.TARGET_TYPE = exports.TARGET_TYPE.CHART;}
+         static  __initStatic2() {this.CHART_TYPE = exports.CHART_TYPE.AREA;}
+
+          __init() {this.node = new display.Container();}
+        
+        
+
+        constructor(chart) {
+            super(chart);AreaDrawer.prototype.__init.call(this);;
+
+            this._lineDrawer = new LineDrawer(chart);
+            // update will trigger from this
+            this._lineDrawer.unlink();
+            this._areaNode = new PlotGradient();
+            this._areaNode.masterPlot = this._lineDrawer.node;
+
+            this.node.addChild(
+                this._areaNode,
+                this._lineDrawer.node
+            );
+        }
+
+         update() {
+            const style = this.getParsedStyle();
+            const area = this._areaNode;
+
+            this._lineDrawer.update(true);
+
+            const fillColor = utils.rgb2hex(style.fill );
+            const fillAlpha = ( style.fill)[3];
+
+            area.colorTop = area.colorBottom = fillColor;
+            area.alphaTop = fillAlpha;
+            area.alphaBottom = fillAlpha * 0.5;
+
+            area.coordTop = 0;
+
+            const viewport = this.chart.viewport;
+            const dataBounds = this._lineDrawer.lastDrawedFetch.dataBounds;
+
+            area.coordBottom = Math.max(viewport.height - dataBounds.fromY, viewport.height);
+
+            area.tint = 0x1571D6;
+        }
+    } AreaDrawer.__initStatic(); AreaDrawer.__initStatic2();
+
+    class TransformedProvider  {
+          __init() {this.range = new Range({
+            fromX: 0, toX: 1, fromY: 0, toY: 1
+        });}
+         __init2() {this._updateId = 0;}
+
+        constructor(
+             sourceProvider
+        ) {;this.sourceProvider = sourceProvider;TransformedProvider.prototype.__init.call(this);TransformedProvider.prototype.__init2.call(this);
+            this.range.on(Observable.CHANGE_EVENT, this.onChange);
+        }
+
+         onChange() {
+            this._updateId ++;
+        }
+
+         get updateId() {
+            return this._updateId;
+        }
+
+         fetch(from, to) {
+            const result = {... this.sourceProvider.fetch(from, to) };
+            result.dataBounds = { ... result.dataBounds };
+
+            const {
+                fromX, fromY, width, height
+            } = this.range;
+
+            const b = result.dataBounds;
+            const dw = b.toX - b.fromX || 1;
+            const dh = b.toY - b.fromY || 1;
+
+            const sx = width / dw;
+            const sy = height / dh;
+
+            result.data = result.data.map((v, i) => {
+                return [
+                    fromX + v[0] * sx, fromY + v[1] * sy
+                ]
+            });
+
+            b.fromX += fromX;
+            b.fromY += fromY;
+            b.toX = fromX + width;
+            b.toY = fromY + height;
+
+            return result;
+        }
+    }
+
+    const DEFAULT_STYLE = {
+        fill: 0x0,
+        stroke: 0x0,
+        thickness: 2,
+        lineJoint: graphics.LINE_JOIN.BEVEL
+    };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    function isValidEnum(prop, enumType) {
+        if (!prop) {
+            return false;
+        }
+
+        return Object.values(enumType).includes(prop);
+    }
+
+    function validate(options) {
+        const result = {...options};
+
+        if (!options.data) {
+            throw  new Error('[Validate] Chart data must be presented!');
+        }
+
+        result.style =  {...DEFAULT_STYLE, ...(options.style) || {}};
+
+        // validate type
+        result.type = isValidEnum(options.type, exports.CHART_TYPE) ? options.type : exports.CHART_TYPE.LINE;
+
+        // validate joints
+        const joint = result.style.lineJoint;
+        result.style.lineJoint = isValidEnum(joint, graphics.LINE_JOIN) ? joint : graphics.LINE_JOIN.BEVEL;
+
+        return result;
+    }
+
+    class Chart extends display.Container {
+         static __initStatic() {this.CHART_DRAWERS = {
+            [exports.CHART_TYPE.LINE]: LineDrawer,
+            [exports.CHART_TYPE.BAR]: null,
+            [exports.CHART_TYPE.AREA]: AreaDrawer,
+        };}
+
+         __init() {this.name = '';}
+          __init2() {this.range = new Range();}
+        
+        
+        
+          __init3() {this.viewport = new math.Rectangle();}
+
+        
+        
+
+        
+
+        constructor (
+              options
+        ) {
+            super();this.options = options;Chart.prototype.__init.call(this);Chart.prototype.__init2.call(this);Chart.prototype.__init3.call(this);;
+
+            this.options = validate(options);
+
+            this.onRangeChanged = this.onRangeChanged.bind(this);
+
+            this.range.on(Observable.CHANGE_EVENT, this.onRangeChanged);
+
+            const DrawerCtor = Chart.CHART_DRAWERS[this.options.type];
+
+            if (!DrawerCtor) {
+                throw new Error('Unsupported chart type: ' + this.options.type);
+            }
+
+            this.chartDrawer = (new DrawerCtor(this)); //new LineDrawer(this);
+
+            const drawers = [
+                this.gridDrawer, this.chartDrawer, this.labelDrawer
+            ].filter(Boolean).map(e => e.node);
+
+            this.addChild(...drawers);
+
+            this.parse();
+
+
+            document.addEventListener('wheel', e => {
+                this.dataProvider.range.scale(e.deltaY > 0 ? 1.1 : 0.9, 1);
+                this._emitUpdate();
+            });
+
+            this.interactive = true;
+            this.interactiveChildren = false;
+
+            this.on('mousemove', this.onDrag);
+        }
+
+         onDrag(event) {
+            const original = event.data.originalEvent ;
+
+            this.buttonMode = false;
+
+            if (original.buttons & 0x1) {
+                this.buttonMode = true;
+
+                if (this._lastMousePoint) {
+                    const dx = event.data.global.x - this._lastMousePoint.x;
+                    const dy = event.data.global.y - this._lastMousePoint.y;
+
+                    this.dataProvider.range.translate(dx, -dy);
+                    this._emitUpdate();
+                }
+
+                this._lastMousePoint = event.data.global.clone();
+            } else {
+                this._lastMousePoint = null;
+            }
+        }
+
+         onRangeChanged (_field, _old, _newValue) {
+            this._emitUpdate();
+        }
+
+         parse() {
+            const data = this.options.data;
+            const labels = this.options.labels;
+
+            let primitiveData;
+
+            // parse data source
+            if ('data' in data) {
+                if ('fetch' in data) {
+                    this.dataProvider = new TransformedProvider(data);
+                    this.labelProvider = new TransformedProvider(labels );
+                    return;
+                } else {
+                    primitiveData = data.data;
+                }
+            } else {
+                primitiveData = data ;
+            }
+
+            const firstEntry = primitiveData[0];
+
+            // array like
+            if (Array.isArray(firstEntry) && firstEntry.length === 2) {
+                this.dataProvider = new TransformedProvider(new ArrayChainDataProvider(primitiveData, false));
+                this.labelProvider = new TransformedProvider(new ArrayChainDataProvider(primitiveData, true)) ;
+                return;
+            }
+
+            // object like
+            if (typeof firstEntry === 'object' && ('x' in firstEntry) && ('y' in firstEntry)) {
+                this.dataProvider = new TransformedProvider(new ObjectDataProvider(primitiveData, false));
+                this.labelProvider = new TransformedProvider(new ObjectDataProvider(primitiveData, true)) ;
+                return;
+            }
+
+            // is array
+
+            this.dataProvider = new TransformedProvider(new ArrayLikeDataProvider(primitiveData));
+            // TODO
+            // Generate a labels when it not present
+            this.labelProvider = new TransformedProvider(new ArrayLikeDataProvider(labels , true)) ;
+
+
+            this._emitUpdate();
+        }
+
+         setViewport (x, y, width, height) {
+            this.viewport.x = x;
+            this.viewport.y = y;
+            this.viewport.width = width;
+            this.viewport.height = height;
+            this.hitArea = this.viewport;
+
+            const rangeData = {
+                fromX: x, fromY: y, toX: x + width, toY: y + height
+            };
+
+            this.dataProvider.range.set(rangeData);
+            this.labelProvider.range.set(rangeData);
+
+            this.emit(exports.CHART_EVENTS.RESIZE, this);
+            this._emitUpdate();
+        }
+
+         destroy(_options) {
+            this.emit(exports.CHART_EVENTS.DESTROY, this);
+
+            super.destroy(_options);
+        }
+
+         _emitUpdate() {
+            this.emit(exports.CHART_EVENTS.UPDATE, this);
+        }
+    } Chart.__initStatic();
+
     core.Renderer.registerPlugin('batch', core.BatchRenderer);
     core.Renderer.registerPlugin('interaction', InteractionManager);
 
@@ -6217,8 +6558,20 @@ gl_FragColor = color * uColor;
         }
     }
 
+    // chart drawers
+    // export * from './charts'
+    // other drawers
+
+    exports.ArrayChainDataProvider = ArrayChainDataProvider;
+    exports.ArrayLikeDataProvider = ArrayLikeDataProvider;
+    exports.BaseDrawer = BaseDrawer;
+    exports.BasePIXIDrawer = BasePIXIDrawer;
     exports.Chart = Chart;
     exports.ChartApp = ChartApp;
+    exports.ObjectDataProvider = ObjectDataProvider;
+    exports.Observable = Observable;
+    exports.Range = Range;
+    exports.parseStyle = parseStyle;
 
     Object.defineProperty(exports, '__esModule', { value: true });
 

@@ -5,12 +5,28 @@ import { IDestroyOptions } from '@pixi/display';
 import { Rectangle } from '@pixi/math';
 import { Renderer } from '@pixi/core';
 
-declare enum BACKEND_TYPE {
+export declare class ArrayChainDataProvider implements IDataProvider {
+    data: IData;
+    readonly label: boolean;
+    constructor(data: IData, label?: boolean);
+    protected _fetchValueInternal(index: number): any;
+    fetch(from?: number, to?: number): IDataFetchResult<IArrayChainData>;
+}
+
+export declare class ArrayLikeDataProvider implements IDataProvider {
+    data: IData;
+    readonly label: boolean;
+    step: number;
+    constructor(data: IData, label?: boolean, step?: number);
+    fetch(from?: number, to?: number): IDataFetchResult<IArrayChainData>;
+}
+
+export declare enum BACKEND_TYPE {
     NONE = "none",
     PIXI = "pixi"
 }
 
-declare class BaseDrawer {
+export declare class BaseDrawer {
     readonly chart: Chart;
     static readonly BACKEND_TYPE: BACKEND_TYPE;
     static readonly TARGET_TYPE: TARGET_TYPE;
@@ -19,27 +35,33 @@ declare class BaseDrawer {
     get targetType(): any;
     get chartType(): any;
     constructor(chart: Chart);
+    link(): void;
+    unlink(): void;
     update(): void;
     reset(): void;
     getParsedStyle(): IChartStyle;
+    fit(): void;
 }
 
-declare class BasePIXIDrawer extends BaseDrawer {
+export declare class BasePIXIDrawer extends BaseDrawer {
     static readonly BACKEND_TYPE = BACKEND_TYPE.PIXI;
     readonly node: DisplayObject;
 }
 
 export declare class Chart extends Container {
     readonly options: IChartDataOptions;
+    private static CHART_DRAWERS;
     name: string;
     readonly range: Range_2;
     readonly chartDrawer: BasePIXIDrawer;
     readonly labelDrawer: BasePIXIDrawer;
     readonly gridDrawer: BasePIXIDrawer;
     readonly viewport: Rectangle;
-    dataProvider: IDataProvider;
-    labelProvider: ILabelDataProvider;
+    dataProvider: TransformedProvider;
+    labelProvider: TransformedProvider;
+    private _lastMousePoint;
     constructor(options: IChartDataOptions);
+    private onDrag;
     private onRangeChanged;
     protected parse(): void;
     setViewport(x: number, y: number, width: number, height: number): void;
@@ -56,7 +78,7 @@ export declare enum CHART_EVENTS {
 export declare enum CHART_TYPE {
     BAR = "bar",
     LINE = "line",
-    FILL = "area"
+    AREA = "area"
 }
 
 export declare class ChartApp {
@@ -96,8 +118,15 @@ export declare interface IChartStyle {
 
 export declare type IData = IArrayData | IArrayChainData | IObjectData;
 
+export declare interface IDataFetchResult<T> {
+    data: T;
+    fromX: number;
+    toX: number;
+    dataBounds: IRangeObject;
+}
+
 export declare interface IDataProvider extends IDataSetModel {
-    fetch(from?: number, to?: number): IData;
+    fetch(from?: number, to?: number): IDataFetchResult<IArrayChainData>;
 }
 
 export declare interface IDataSetModel {
@@ -107,7 +136,7 @@ export declare interface IDataSetModel {
 export declare type ILabelData = Array<string | Date | number>;
 
 export declare interface ILabelDataProvider {
-    fetch(from?: number, to?: number): ILabelData;
+    fetch(from?: number, to?: number): IDataFetchResult<ILabelData>;
 }
 
 export declare type IObjectData = Array<{
@@ -115,14 +144,18 @@ export declare type IObjectData = Array<{
     y: number;
 }>;
 
-declare interface IRangeObject {
+export declare interface IRangeObject {
     fromX?: number;
     fromY?: number;
     toX?: number;
     toY?: number;
 }
 
-declare class Observable<T> extends EventEmitter {
+export declare class ObjectDataProvider extends ArrayChainDataProvider {
+    protected _fetchValueInternal(index: number): any;
+}
+
+export declare class Observable<T> extends EventEmitter {
     static CHANGE_EVENT: string;
     protected _dirtyId: number;
     constructor(fields?: Array<string>);
@@ -135,6 +168,8 @@ declare class Observable<T> extends EventEmitter {
     protected wrap<T>(fields: Array<string>, target: any): Observable<T>;
 }
 
+export declare function parseStyle(style: IChartStyle): IChartStyle;
+
 declare class Range_2 extends Observable<IRangeObject> {
     private _fromX;
     private _toX;
@@ -145,14 +180,29 @@ declare class Range_2 extends Observable<IRangeObject> {
     toX: number;
     toY: number;
     constructor(data?: IRangeObject);
+    get width(): number;
+    get height(): number;
     set({ fromX, fromY, toX, toY }?: IRangeObject): void;
+    scale(x: number, y: number): void;
+    translate(x: number, y: number): void;
 }
+export { Range_2 as Range }
 
-declare enum TARGET_TYPE {
+export declare enum TARGET_TYPE {
     NONE = "none",
     CHART = "chart",
     LABELS = "labels",
     GRID = "grid"
+}
+
+declare class TransformedProvider implements IDataProvider {
+    sourceProvider: IDataProvider;
+    readonly range: Range_2;
+    private _updateId;
+    constructor(sourceProvider: IDataProvider);
+    private onChange;
+    get updateId(): number;
+    fetch(from?: number, to?: number): IDataFetchResult<IArrayChainData>;
 }
 
 export { }
