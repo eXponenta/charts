@@ -14,6 +14,7 @@ import { AreaDrawer} from "../drawers/charts/AreaDrawer";
 import { LineDrawer} from "../drawers/charts";
 import { TransformedProvider} from "./providers/TransformedProvider";
 import { InteractionEvent} from "@pixi/interaction";
+import {GridDrawer} from "../drawers/grid/GridDrawer";
 
 export type ILabelData = Array<string | Date | number>;
 export type IArrayData = ArrayLike<number>;
@@ -132,7 +133,9 @@ export class Chart extends Container {
             throw new Error('Unsupported chart type: ' + this.options.type);
         }
 
-        this.chartDrawer = <BasePIXIDrawer>(new DrawerCtor(this)); //new LineDrawer(this);
+        this.chartDrawer = <BasePIXIDrawer>(new DrawerCtor(this));
+        this.gridDrawer = new GridDrawer(this);
+
 
         const drawers = [
             this.gridDrawer, this.chartDrawer, this.labelDrawer
