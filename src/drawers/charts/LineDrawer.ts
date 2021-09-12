@@ -6,6 +6,7 @@ import { CHART_TYPE } from "../../core/CHART_TYPE";
 
 import { BasePIXIDrawer } from "../BasePIXIDrawer";
 import { Plot } from "../../../pixi-candles/src";
+import { IArrayChainData, IDataFetchResult } from "../../core";
 
 export class LineDrawer extends BasePIXIDrawer {
     public static readonly CHART_TYPE = CHART_TYPE.LINE;
@@ -15,6 +16,7 @@ export class LineDrawer extends BasePIXIDrawer {
     private _dirtyId = -1;
 
     public readonly node: Plot = new Plot(null);
+    public lastDrawedFetch: IDataFetchResult<IArrayChainData>;
 
     /**
      *
@@ -40,13 +42,15 @@ export class LineDrawer extends BasePIXIDrawer {
 
         node.clear();
 
-        const width = viewport.width;
-        const height = viewport.height;
+        this.lastDrawedFetch = dataProvider.fetch();
 
-        const data = dataProvider.fetch() as Array<number>;
-        const max = Math.max(...data);
-        const min = Math.min(...data);
-        const step = width / (data.length - 1);
+        const {
+            data,
+            dataBounds
+        } = this.lastDrawedFetch;
+
+        const dataWidth = dataBounds.toX - dataBounds.fromX;
+        const dataHeight = dataBounds.toY - dataBounds.fromY;
 
         node.lineStyle(style.thickness || 2, void 0, style.lineJoint as LINE_JOIN);
 
@@ -56,8 +60,8 @@ export class LineDrawer extends BasePIXIDrawer {
         hex2rgb(0xffffff, node.shader.uniforms.uGeomColor);
 
         for (let i = 0; i < data.length; i ++) {
-            const x = step * i;
-            const y = height - height * (data[i] - min) / (max - min);
+            const x = data[i][0];// * width / dataWidth;
+            const y = dataHeight - data[i][1];// * height / dataHeight; // flip
 
             if (i === 0) {
                 node.moveTo(x, y);
@@ -65,9 +69,14 @@ export class LineDrawer extends BasePIXIDrawer {
                 node.lineTo(x, y);
             }
         }
+
     }
 
     reset() {
         this.node.clear();
+    }
+
+    fit() {
+
     }
 }

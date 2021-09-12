@@ -6,6 +6,6 @@ export class ObjectDataProvider extends ArrayChainDataProvider {
 		const chain = this.data as IObjectData;
 		const entry = chain[index];
 
-		return this.label ? entry.x : entry.y;
+		return this.label ? entry.x: [entry.x, entry.y];
 	}
 }

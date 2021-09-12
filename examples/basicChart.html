@@ -5,21 +5,25 @@
         box-sizing: border-box;
         width: 100%;
         height: 200px;
+
+        border: 2px solid;
     }
 </style>
 <canvas width="300" height="200" id="chart"></canvas>
 
 <script>
+    const random = Array.from({length: 100}, e => Math.random());
     const app = new PIXI.charts.ChartApp('#chart');
     const chart = new PIXI.charts.Chart({
+        type: 'area',
         labels: [],
-        data: [
-            10, 20, 30, 40, 10, 20, 30, 40
-        ],
+        data: random,
+
         style: {
-            stroke: "rgba(255, 0, 0, 0.5)",
-            thickness: 10,
-            lineJoint: 'bevel',
+            stroke: "rgba(255, 0, 0, 1)",
+            fill: "#00cc00",
+            thickness: 2,
+            lineJoint: 'miter',
         }
     });
 

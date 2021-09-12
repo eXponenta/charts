@@ -56,9 +56,15 @@ export class BaseDrawer {
 
     }
 
-
     public getParsedStyle(): IChartStyle {
         return parseStyle(this.chart.options.style);
+    }
+
+    /**
+     * Fit drawer to drawable data
+     */
+    public fit () {
+
     }
 }
 
