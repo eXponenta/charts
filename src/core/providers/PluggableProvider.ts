@@ -1,34 +1,50 @@
-import type { Chart, IArrayChainData, IDataFetchResult, IDataProvider } from "../Chart";
+import type {Chart, IArrayChainData, IDataFetchResult, IDataProvider} from "../Chart";
+import {IDataPlugin, IFunctionDataPlugin} from "../plugins/IDataPlugin";
 
 /**
- * Data plugin interface, used for transforming a passed data
+ * Validate a type of plugin and return valid plugin
+ * @param plugin
  */
-export interface IDataPlugin {
-    /**
-     * Unique name for plugin
-     */
-    name: string;
-    /**
-     * Init method, called when a fetch process is begin run, before call fetch from data provider
-     * @param context - instance of current context that execute plugin, plugins is sharable and can be handled by different contexts
-     */
-    init ?(context: PluggableProvider): void;
+function getPluginInstance (plugin: IDataPlugin | IFunctionDataPlugin): IDataPlugin | IFunctionDataPlugin | null
+{
+    if (!plugin) {
+        return null;
+    }
 
-    /**
-     * Called every times while fetched elements is processed
-     * @param {*} dataEntry current processed record
-     * @param {IDataFetchResult<*>} source processed source returned from fetch of data provider
-     * @param index global index of processed data (relative a source.data length)
-     * @return Should return processed entry, NOT NULL!
-     */
-    processElement? (dataEntry: any, source: IDataFetchResult<any>, index: number): any;
+    if (typeof plugin === "function") {
+        const proto = plugin.prototype;
 
-    /**
-     * Called on end of data processing, can mutate result fetch result structure or entry data (UNSAFE)
-     * @param result
-     * @param source
-     */
-    processResult? (result: IDataFetchResult<any>, source: IDataFetchResult<any>): IDataFetchResult<any>;
+        // () => {} not a have prototype
+        if (!proto) {
+            return plugin;
+        }
+
+        // class constructor
+        if (
+            'init' in proto ||
+            'processElements' in proto ||
+            'processResult' in proto
+        ) {
+            // is object constructor
+            return new (<any>plugin)();
+        }
+
+        // regular function, i think, wrap
+        return { name: plugin.name, processElements: plugin };
+    }
+
+    // object notated plugin
+    if ( typeof plugin === 'object' &&
+        (
+            'init' in plugin ||
+            'processElements' in plugin ||
+            'processResult' in plugin
+        )
+    ) {
+        return plugin;
+    }
+
+    return null;
 }
 
 /**
@@ -41,59 +57,84 @@ export class PluggableProvider implements IDataProvider, IDataPlugin {
 
     public static registerPlugin (plugin: IDataPlugin): boolean {
 
-        // process when plugin is not instance
-        if (typeof plugin === 'function') {
-            try {
-                // is ctor
-                plugin = new (<any>plugin)()
-            } catch (e) {
-                return false;
-            }
-        }
+        plugin = getPluginInstance(plugin);
 
-        if (!plugin || !(plugin.processElement || plugin.processResult)) {
+        if (!plugin) {
             return false;
         }
 
         this.plugins.push(plugin);
+
+        return true;
     }
 
     private readonly _plugins: IDataPlugin[] = [];
+    private readonly _activePlugins: IDataPlugin[] = [];
+    private _sessionPlugins: IDataPlugin[] = [];
 
     constructor(
         public sourceProvider: IDataProvider,
         public chart: Chart,
         plugins: IDataPlugin[] = []
     ) {
-        this._plugins = [...PluggableProvider.plugins, ...plugins];
+        this._plugins = [
+            ...PluggableProvider.plugins,
+            ...plugins.map(e => getPluginInstance(e)).filter(Boolean)
+        ];
     }
 
-    init() {
-        for (const p of this._plugins) {
-            p.init && p.init(this);
-        }
-    }
+    /**
+     * Register session used plugins, sessions used plugins drops after fetch
+     * @param {(IDataPlugin | IFunctionDataPlugin)[]} sessionPlugins
+     */
+    public use (...sessionPlugins: (IDataPlugin | IFunctionDataPlugin)[]): void {
+        for (const p of sessionPlugins) {
+            const valid = getPluginInstance(p);
 
-    processEntry (dataEntry: any, source: IDataFetchResult<any>, index: number): any
-    {
-        for (const p of this._plugins) {
-            if (!p.processElement) {
+            if (!valid) {
                 continue;
             }
 
-            dataEntry = p.processElement(dataEntry, source, index);
+            this._sessionPlugins.push(valid);
+        }
+    }
 
-            if (dataEntry == void 0) {
+    init(): boolean
+    {
+        this._activePlugins.length = 0;
+
+        for (const p of this._plugins) {
+
+            if (!p.init || p.init(this)) {
+                this._activePlugins.push(p);
+            }
+        }
+
+        this._activePlugins.push(...this._sessionPlugins);
+
+        return  true;
+    }
+
+    processElements (data: any[], source: IDataFetchResult<any>): any
+    {
+        for (const p of this._activePlugins) {
+            if (!p.processElements) {
+                continue;
+            }
+
+            data = p.processElements(data, source);
+
+            if (data == void 0) {
                 throw new Error('Illegal output (null not allowed) by:' + p.name);
             }
         }
 
-        return dataEntry;
+        return data;
     }
 
     processResult (result: IDataFetchResult<any>, source: IDataFetchResult<any>): IDataFetchResult<any>
     {
-        for (const p of this._plugins) {
+        for (const p of this._activePlugins) {
             if (!p.processResult) {
                 continue;
             }
@@ -112,73 +153,15 @@ export class PluggableProvider implements IDataProvider, IDataPlugin {
         result.dataBounds = { ... result.dataBounds };
 
         const sourceData = result.data;
-        const resultData = [];
 
-        for (let i = 0, l = sourceData.length; i < l; ++i) {
-            resultData.push(this.processEntry(sourceData[i], source, i));
-        }
-
-        result.data = resultData;
+        result.data =  this.processElements(sourceData, source);
         result = this.processResult(result, source);
 
-        return result;
-    }
-}
-
-/**
- * Data transform plugin, used for converting a input data space to Chart range values,
- */
-export class DataTransformPlugin implements IDataPlugin {
-    public readonly name = 'DataTransformPlugin';
-
-    private context: PluggableProvider;
-
-    /**
-     * @implements IDataPlugin
-     * @inheritDoc
-     */
-    init(context: PluggableProvider) {
-        this.context = context;
-    }
-
-    /**
-     * @implements IDataPlugin
-     * @inheritDoc
-     */
-    processElement(dataEntry: any, source: IDataFetchResult<any>, index: number): any {
-        const {
-            fromX, fromY, width, height
-        } = this.context.chart.range;
-
-        const b = source.dataBounds;
-        const dw = b.toX - b.fromX || 1;
-        const dh = b.toY - b.fromY || 1;
-
-        const sx = width / dw;
-        const sy = height / dh;
-
-        return [
-            fromX + dataEntry[0] * sx,
-            height - (fromY + dataEntry[1] * sy) // flip
-        ];
-    }
-
-    /**
-     * @implements IDataPlugin
-     * @inheritDoc
-     */
-    processResult(result: IDataFetchResult<any>, _source: IDataFetchResult<any>): IDataFetchResult<any> {
-        const {
-            fromX, fromY, width, height
-        } = this.context.chart.range;
-
-        const b = result.dataBounds;
-
-        b.fromX += fromX;
-        b.fromY += fromY;
-        b.toX = fromX + width;
-        b.toY = fromY + height;
+        // disable plugins
+        this._sessionPlugins.length = 0;
+        this._activePlugins.length = 0;
 
         return result;
     }
 }
+

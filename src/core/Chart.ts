@@ -1,6 +1,7 @@
 import { Point, Rectangle } from "@pixi/math";
 import { LINE_JOIN } from "@pixi/graphics";
 import { Container, IDestroyOptions } from "@pixi/display";
+import { InteractionEvent} from "@pixi/interaction";
 
 import { IRangeObject, Range } from "./Range";
 import { Observable } from "./Observable";
@@ -9,13 +10,12 @@ import { BaseDrawer } from "../drawers/";
 import { CHART_EVENTS } from "./CHART_EVENTS";
 import { CHART_TYPE } from "./CHART_TYPE";
 
-import { ArrayChainDataProvider, ArrayLikeDataProvider, ObjectDataProvider } from "./providers";
+import { ArrayChainDataProvider, ArrayLikeDataProvider, ObjectDataProvider, PluggableProvider } from "./providers";
 import { AreaDrawer} from "../drawers/charts/AreaDrawer";
 import { LineDrawer} from "../drawers/charts";
-import { PluggableProvider} from "./providers/PluggableProvider";
-import { InteractionEvent} from "@pixi/interaction";
-import {GridDrawer} from "../drawers/grid/GridDrawer";
-import {LabelsDrawer} from "../drawers/grid/LabelsDrawer";
+import { GridDrawer } from "../drawers/grid/GridDrawer";
+import { LabelsDrawer } from "../drawers/labels/LabelsDrawer";
+import { DataTransformPlugin } from "./plugins/DataTransformPlugin";
 
 export type ILabelData = Array<string | Date | number>;
 export type IArrayData = ArrayLike<number>;
@@ -90,6 +90,10 @@ function validate(options: IChartDataOptions): IChartDataOptions {
 
     return result;
 }
+
+// Register Data plugins
+
+PluggableProvider.registerPlugin(DataTransformPlugin);
 
 export class Chart extends Container {
     private static CHART_DRAWERS: Record<CHART_TYPE, typeof BaseDrawer> = {
