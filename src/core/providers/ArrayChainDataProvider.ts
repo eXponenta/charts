@@ -27,8 +27,8 @@ export class ArrayChainDataProvider implements IDataProvider {
         let maxX = -Infinity;
         let maxY = -Infinity;
 
-        for (let i = 0; i < from - to; i ++) {
-            data[i] = this._fetchValueInternal(i);
+        for (let i = 0; i < to - from; i ++) {
+            data[i] = this._fetchValueInternal(i + from);
 
             if (!this.label) {
                 minX = Math.min(data[i][0], minX);
