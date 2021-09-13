@@ -3,8 +3,10 @@ import { rgb2hex } from "@pixi/utils";
 import { PlotGradient } from "../../../pixi-candles/src";
 
 import { BasePIXIDrawer } from "../BasePIXIDrawer";
-import type { Chart } from "../../core";
-import { TARGET_TYPE, CHART_TYPE } from "../../core";
+import type { Chart } from "../../core/Chart";
+import { CHART_TYPE } from "../../core/CHART_TYPE";
+import { TARGET_TYPE } from "../../core/TARGET_TYPE";
+
 import { LineDrawer } from "./LineDrawer";
 
 export class AreaDrawer extends BasePIXIDrawer {
