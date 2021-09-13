@@ -12,7 +12,7 @@ import { CHART_TYPE } from "./CHART_TYPE";
 import { ArrayChainDataProvider, ArrayLikeDataProvider, ObjectDataProvider } from "./providers";
 import { AreaDrawer} from "../drawers/charts/AreaDrawer";
 import { LineDrawer} from "../drawers/charts";
-import { TransformedProvider} from "./providers/TransformedProvider";
+import { PluggableProvider} from "./providers/PluggableProvider";
 import { InteractionEvent} from "@pixi/interaction";
 import {GridDrawer} from "../drawers/grid/GridDrawer";
 import {LabelsDrawer} from "../drawers/grid/LabelsDrawer";
@@ -108,8 +108,8 @@ export class Chart extends Container {
     public readonly limits: Range = new Range();
 
 
-    public dataProvider: TransformedProvider;
-    public labelProvider: TransformedProvider;
+    public dataProvider: PluggableProvider;
+    public labelProvider: PluggableProvider;
 
     private _lastPressedMousePoint: Point;
     private _lastMousePoint: Point;
@@ -249,8 +249,8 @@ export class Chart extends Container {
             }
         }
 
-        this.dataProvider = new TransformedProvider(dataProvider, this.range);
-        this.labelProvider =new TransformedProvider(labelProvider as any, this.range) as any;
+        this.dataProvider = new PluggableProvider(dataProvider, this);
+        this.labelProvider = new PluggableProvider(labelProvider as any, this) as any;
 
         this._emitUpdate();
     }

@@ -87,6 +87,7 @@
     "typescript": "^3.9.7"
   },
   "dependencies": {
-    "color-parse": "^1.4.2"
+    "color-parse": "^1.4.2",
+    "nice-ticks": "^1.0.1"
   }
 }
