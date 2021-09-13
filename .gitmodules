@@ -1,0 +1,3 @@
+[submodule "pixi-candles"]
+    path = pixi-candles
+	url = https://github.com/gameofbombs/pixi-candles
