@@ -9,10 +9,13 @@ import type { BasePIXIDrawer } from "../drawers/";
 import { BaseDrawer } from "../drawers/";
 import { CHART_EVENTS } from "./CHART_EVENTS";
 import { CHART_TYPE } from "./CHART_TYPE";
-
-import { ArrayChainDataProvider, ArrayLikeDataProvider, ObjectDataProvider, PluggableProvider } from "./providers";
-import { AreaDrawer} from "../drawers/charts/AreaDrawer";
-import { LineDrawer} from "../drawers/charts";
+import {
+    ArrayChainDataProvider,
+    ArrayLikeDataProvider,
+    ObjectDataProvider,
+    PluggableProvider
+} from "./providers";
+import { LineDrawer, AreaDrawer } from "../drawers/charts";
 import { GridDrawer } from "../drawers/grid/GridDrawer";
 import { LabelsDrawer } from "../drawers/labels/LabelsDrawer";
 import { DataTransformPlugin } from "./plugins/DataTransformPlugin";
