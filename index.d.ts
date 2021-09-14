@@ -2,7 +2,6 @@ import { Container } from '@pixi/display';
 import { DisplayObject } from '@pixi/display';
 import { EventEmitter } from '@pixi/utils';
 import { IDestroyOptions } from '@pixi/display';
-import { Rectangle } from '@pixi/math';
 import { Renderer } from '@pixi/core';
 
 export declare class ArrayChainDataProvider implements IDataProvider {
@@ -21,51 +20,46 @@ export declare class ArrayLikeDataProvider implements IDataProvider {
     fetch(from?: number, to?: number): IDataFetchResult<IArrayChainData>;
 }
 
-export declare enum BACKEND_TYPE {
-    NONE = "none",
-    PIXI = "pixi"
-}
-
-export declare class BaseDrawer {
-    readonly chart: Chart;
-    static readonly BACKEND_TYPE: BACKEND_TYPE;
-    static readonly TARGET_TYPE: TARGET_TYPE;
-    static readonly CHART_TYPE: CHART_TYPE;
-    get backendType(): any;
-    get targetType(): any;
-    get chartType(): any;
-    constructor(chart: Chart);
-    link(): void;
-    unlink(): void;
-    update(): void;
+export declare class BaseDrawer implements IDrawerPlugin {
+    name: string;
+    protected context: Chart;
+    init(context: Chart): boolean;
+    update(): boolean;
+    draw(): void;
     reset(): void;
-    getParsedStyle(): IChartStyle;
-    fit(): void;
-}
-
-export declare class BasePIXIDrawer extends BaseDrawer {
-    static readonly BACKEND_TYPE = BACKEND_TYPE.PIXI;
-    readonly node: DisplayObject;
+    dispose(): void;
+    protected getParsedStyle(): IChartStyle;
 }
 
 export declare class Chart extends Container {
     readonly options: IChartDataOptions;
-    private static CHART_DRAWERS;
     name: string;
+    protected static plugins: typeof BaseDrawer[];
+    static registerPlugin(plugin: typeof BaseDrawer): boolean;
     readonly range: Range_2;
-    readonly chartDrawer: BasePIXIDrawer;
-    readonly labelDrawer: BasePIXIDrawer;
-    readonly gridDrawer: BasePIXIDrawer;
-    readonly viewport: Rectangle;
-    dataProvider: TransformedProvider;
-    labelProvider: TransformedProvider;
+    readonly limits: Range_2;
+    dataProvider: PluggableProvider;
+    labelProvider: PluggableProvider;
+    private _lastPressedMousePoint;
     private _lastMousePoint;
-    constructor(options: IChartDataOptions);
+    private _rangeScale;
+    private _rangeTranslate;
+    private readonly _plugins;
+    private readonly _activePlugins;
+    constructor(options: IChartDataOptions, plugins?: IDrawerPlugin[]);
+    protected preparePlugins(externalPlugins: IDrawerPlugin[]): void;
+    protected init(): void;
+    protected update(): void;
+    reset(): void;
+    destroy(_options?: IDestroyOptions | boolean): void;
+    private transformRange;
+    private onWheel;
     private onDrag;
     private onRangeChanged;
     protected parse(): void;
     setViewport(x: number, y: number, width: number, height: number): void;
-    destroy(_options?: IDestroyOptions | boolean): void;
+    getDrawerPluginByName<T extends IDrawerPlugin>(name: string, activeOnly?: boolean): T | null;
+    getDrawerPluginByClass<T extends IDrawerPlugin>(classType: typeof BaseDrawer, activeOnly?: boolean): T | null;
     private _emitUpdate;
 }
 
@@ -98,6 +92,15 @@ export declare class ChartApp {
     draw(): void;
 }
 
+export declare class DataTransformPlugin implements IDataPlugin {
+    readonly name = "DataTransformPlugin";
+    private context;
+    readonly reduceXRange = true;
+    init(context: PluggableProvider): boolean;
+    processElements(data: any[], source: IDataFetchResult<any>): any;
+    processResult(result: IDataFetchResult<any>, _source: IDataFetchResult<any>): IDataFetchResult<any>;
+}
+
 export declare type IArrayChainData = Array<[number, number]>;
 
 export declare type IArrayData = ArrayLike<number>;
@@ -125,6 +128,13 @@ export declare interface IDataFetchResult<T> {
     dataBounds: IRangeObject;
 }
 
+export declare interface IDataPlugin {
+    name: string;
+    init?(context: PluggableProvider): boolean;
+    processElements?(data: any[], source: IDataFetchResult<any>): any[];
+    processResult?(result: IDataFetchResult<any>, source: IDataFetchResult<any>): IDataFetchResult<any>;
+}
+
 export declare interface IDataProvider extends IDataSetModel {
     fetch(from?: number, to?: number): IDataFetchResult<IArrayChainData>;
 }
@@ -132,6 +142,18 @@ export declare interface IDataProvider extends IDataSetModel {
 export declare interface IDataSetModel {
     data?: IData;
 }
+
+export declare interface IDrawerPlugin {
+    name: string;
+    node?: DisplayObject;
+    init(context: Chart): boolean;
+    update?(): boolean;
+    draw?(): void;
+    reset?(): void;
+    dispose?(): void;
+}
+
+export declare type IFunctionDataPlugin = (data: any[], source: IDataFetchResult<any>) => any[];
 
 export declare type ILabelData = Array<string | Date | number>;
 
@@ -170,6 +192,23 @@ export declare class Observable<T> extends EventEmitter {
 
 export declare function parseStyle(style: IChartStyle): IChartStyle;
 
+export declare class PluggableProvider implements IDataProvider, IDataPlugin {
+    sourceProvider: IDataProvider;
+    chart: Chart;
+    readonly name = "PluggableProvider";
+    private static readonly plugins;
+    static registerPlugin(plugin: IDataPlugin): boolean;
+    private readonly _plugins;
+    private readonly _activePlugins;
+    private _sessionPlugins;
+    constructor(sourceProvider: IDataProvider, chart: Chart, plugins?: IDataPlugin[]);
+    use(...sessionPlugins: (IDataPlugin | IFunctionDataPlugin)[]): void;
+    init(): boolean;
+    processElements(data: any[], source: IDataFetchResult<any>): any;
+    processResult(result: IDataFetchResult<any>, source: IDataFetchResult<any>): IDataFetchResult<any>;
+    fetch(from?: number, to?: number): IDataFetchResult<IArrayChainData>;
+}
+
 declare class Range_2 extends Observable<IRangeObject> {
     private _fromX;
     private _toX;
@@ -187,22 +226,5 @@ declare class Range_2 extends Observable<IRangeObject> {
     translate(x: number, y: number): void;
 }
 export { Range_2 as Range }
-
-export declare enum TARGET_TYPE {
-    NONE = "none",
-    CHART = "chart",
-    LABELS = "labels",
-    GRID = "grid"
-}
-
-declare class TransformedProvider implements IDataProvider {
-    sourceProvider: IDataProvider;
-    readonly range: Range_2;
-    private _updateId;
-    constructor(sourceProvider: IDataProvider);
-    private onChange;
-    get updateId(): number;
-    fetch(from?: number, to?: number): IDataFetchResult<IArrayChainData>;
-}
 
 export { }
