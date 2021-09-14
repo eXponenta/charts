@@ -1,6 +1,6 @@
 {
   "name": "@pixi/charts",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "PixiJS v5+ plugins that draws various charts types",
   "author": "Konstantin Timoshenko",
   "contributors": [
