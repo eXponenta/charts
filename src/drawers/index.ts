@@ -1,7 +1,6 @@
-export * from './BACKEND_TYPE';
 export * from './BaseDrawer';
-export * from './BasePIXIDrawer';
 export * from './Utils';
+export  * from './IDrawerPlugin';
 
 // chart drawers
 // export * from './charts'

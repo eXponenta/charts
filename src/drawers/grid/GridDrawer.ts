@@ -1,15 +1,14 @@
-import { BasePIXIDrawer } from "../BasePIXIDrawer";
-import { TARGET_TYPE } from "../../core/TARGET_TYPE";
 import { Graphics } from "@pixi/graphics";
+import { BaseDrawer } from "../BaseDrawer";
 
-export class GridDrawer extends BasePIXIDrawer {
-    public static readonly TARGET_TYPE: TARGET_TYPE = TARGET_TYPE.GRID;
+export class GridDrawer extends BaseDrawer {
+    public readonly name = 'GridDrawer';
     public node: Graphics = new Graphics();
 
-    public update() {
+    public update(): boolean {
         const {
             limits, range
-        } = this.chart;
+        } = this.context;
 
         let qX = 100 * range.width / limits.width;
         let qY = 100;
@@ -49,5 +48,6 @@ export class GridDrawer extends BasePIXIDrawer {
         }
 
         super.update();
+        return true;
     }
 }

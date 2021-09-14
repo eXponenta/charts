@@ -1,70 +1,37 @@
-import type {Chart, IChartStyle} from "../core/Chart";
-import {CHART_TYPE} from "../core/CHART_TYPE";
-import {TARGET_TYPE} from "../core/TARGET_TYPE";
-import {BACKEND_TYPE} from "./BACKEND_TYPE";
-import {CHART_EVENTS} from "../core/CHART_EVENTS";
-import {parseStyle} from "./Utils";
+import type { Chart, IChartStyle } from "../core/Chart";
+import { parseStyle } from "./Utils";
+import type { IDrawerPlugin } from "./IDrawerPlugin";
 
-export class BaseDrawer {
-    public static readonly BACKEND_TYPE: BACKEND_TYPE = BACKEND_TYPE.NONE;
-    public static readonly TARGET_TYPE: TARGET_TYPE = TARGET_TYPE.NONE;
-    public static readonly CHART_TYPE: CHART_TYPE = CHART_TYPE.LINE;
+export class BaseDrawer implements IDrawerPlugin {
+    name: string = '';
 
-    public get backendType() {
-        return  (<any>this.constructor).BACKEND_TYPE;
+    protected context: Chart = null;
+
+    public init (context: Chart): boolean {
+        this.context = context;
+
+        return true;
     }
 
-    public get targetType() {
-        return  (<any>this.constructor).TARGET_TYPE;
+    public update(): boolean  {
+        return false;
     }
 
-    public get chartType() {
-        return  (<any>this.constructor).CHART_TYPE;
-    }
-
-    constructor (
-        public readonly chart: Chart
-    ) {
-        this.link();
-    }
-
-    /**
-     * Link for watching a chart upadtes
-     * @protected
-     */
-    public link() {
-        this.unlink();
-
-        this.chart.on(CHART_EVENTS.UPDATE, this.update, this);
-        this.chart.on(CHART_EVENTS.DESTROY, this.reset, this);
-    }
-    /**
-     * Unlink from chart updates watchings
-     * @protected
-     */
-
-    public unlink() {
-        this.chart.off(CHART_EVENTS.UPDATE, this.update, this);
-        this.chart.off(CHART_EVENTS.DESTROY, this.reset, this);
-    }
-
-    public update() {
+    public draw(): void {
 
     }
 
-    public reset() {
+    public reset(): void {
 
     }
 
-    public getParsedStyle(): IChartStyle {
-        return parseStyle(this.chart.options.style);
-    }
-
-    /**
-     * Fit drawer to drawable data
-     */
-    public fit () {
+    public dispose(): void {
 
     }
+
+    protected getParsedStyle(): IChartStyle {
+        return parseStyle(this.context.options.style);
+    }
+
 }
 

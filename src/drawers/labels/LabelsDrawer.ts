@@ -1,6 +1,5 @@
-import { BasePIXIDrawer } from "../../drawers/BasePIXIDrawer";
-import { TARGET_TYPE } from "../../core/TARGET_TYPE";
 import {Graphics} from "@pixi/graphics";
+import {BaseDrawer} from "../BaseDrawer";
 
 export enum LABEL_ORIENTATION {
     LEFT = 'left',
@@ -12,16 +11,14 @@ export enum RENDER_MODE {
     ONLY_Y = 'only_y'
 }
 
-export class LabelsDrawer extends BasePIXIDrawer {
-    public static readonly TARGET_TYPE: TARGET_TYPE = TARGET_TYPE.LABELS;
+export class LabelsDrawer extends BaseDrawer {
     public node: Graphics = new Graphics();
-    public orientation: LABEL_ORIENTATION = LABEL_ORIENTATION.LEFT;
-    public renderMode: RENDER_MODE = RENDER_MODE.NORMAL;
+    public name = 'LabelDrawer';
 
-    public update() {
+    public update(): boolean {
         const {
             range, limits
-        } = this.chart;
+        } = this.context;
 
         const node = this.node;
 
@@ -37,5 +34,7 @@ export class LabelsDrawer extends BasePIXIDrawer {
         node.drawRect(limits.fromX, limits.toY - 40, limits.width, 40);
 
         super.update();
+
+        return  true;
     }
 }

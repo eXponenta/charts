@@ -5,7 +5,6 @@ import { InteractionEvent} from "@pixi/interaction";
 
 import { IRangeObject, Range } from "./Range";
 import { Observable } from "./Observable";
-import type { BasePIXIDrawer } from "../drawers/";
 import { BaseDrawer } from "../drawers/";
 import { CHART_EVENTS } from "./CHART_EVENTS";
 import { CHART_TYPE } from "./CHART_TYPE";
@@ -15,10 +14,12 @@ import {
     ObjectDataProvider,
     PluggableProvider
 } from "./providers";
-import { LineDrawer, AreaDrawer } from "../drawers/charts";
+
+import { DataTransformPlugin } from "./plugins/DataTransformPlugin";
+import { IDrawerPlugin } from "../drawers/IDrawerPlugin";
+import { AreaDrawer, LineDrawer} from "../drawers/charts";
 import { GridDrawer } from "../drawers/grid/GridDrawer";
 import { LabelsDrawer } from "../drawers/labels/LabelsDrawer";
-import { DataTransformPlugin } from "./plugins/DataTransformPlugin";
 
 export type ILabelData = Array<string | Date | number>;
 export type IArrayData = ArrayLike<number>;
@@ -94,26 +95,22 @@ function validate(options: IChartDataOptions): IChartDataOptions {
     return result;
 }
 
-// Register Data plugins
-
-PluggableProvider.registerPlugin(DataTransformPlugin);
-
 export class Chart extends Container {
-    private static CHART_DRAWERS: Record<CHART_TYPE, typeof BaseDrawer> = {
-        [CHART_TYPE.LINE]: LineDrawer,
-        [CHART_TYPE.BAR]: null,
-        [CHART_TYPE.AREA]: AreaDrawer,
-    }
-
     public name: string = '';
-    public readonly chartDrawer: BasePIXIDrawer;
-    public readonly labelDrawer: BasePIXIDrawer;
-    public readonly gridDrawer: BasePIXIDrawer;
-    public readonly viewport: Rectangle = new Rectangle();
+
+    protected static plugins: typeof BaseDrawer[] = [];
+    public static registerPlugin (plugin: typeof BaseDrawer): boolean {
+        if (typeof plugin !== 'function' || !('init' in plugin.prototype)) {
+            console.warn('[Chart plugin register] Plugin should have a valid constructor and has init method');
+            return false;
+        }
+
+        this.plugins.push(plugin);
+        return true;
+    }
 
     public readonly range: Range = new Range();
     public readonly limits: Range = new Range();
-
 
     public dataProvider: PluggableProvider;
     public labelProvider: PluggableProvider;
@@ -124,41 +121,117 @@ export class Chart extends Container {
     private _rangeScale: Point = new Point(1, 1);
     private _rangeTranslate: Point = new Point(0,0);
 
+    private readonly _plugins: IDrawerPlugin[] = [];
+    private readonly _activePlugins: IDrawerPlugin[] = [];
+
     constructor (
-        public readonly options: IChartDataOptions
+        public readonly options: IChartDataOptions,
+        plugins: IDrawerPlugin[] = [],
     ) {
         super();
 
-        this.options = validate(options);
-
         this.onRangeChanged = this.onRangeChanged.bind(this);
 
+        this.options = validate(options);
         this.range.on(Observable.CHANGE_EVENT, this.onRangeChanged);
-
-        const DrawerCtor = Chart.CHART_DRAWERS[this.options.type];
-
-        if (!DrawerCtor) {
-            throw new Error('Unsupported chart type: ' + this.options.type);
-        }
-
-        this.chartDrawer = <BasePIXIDrawer>(new DrawerCtor(this));
-        this.gridDrawer = new GridDrawer(this);
-        this.labelDrawer = new LabelsDrawer(this);
-
-        const drawers = [
-            this.gridDrawer, this.chartDrawer, this.labelDrawer
-        ].filter(Boolean).map(e => e.node);
-
-        this.addChild(...drawers);
-
-        this.parse();
 
         this.interactive = true;
         this.interactiveChildren = false;
 
+        this.preparePlugins(plugins);
+
         this.on('mousemove', this.onDrag);
         document.addEventListener('wheel', this.onWheel.bind(this));
 
+        // first init
+        this.init();
+    }
+
+    protected preparePlugins (externalPlugins: IDrawerPlugin[]) {
+        this._plugins.length = 0;
+
+        const pluginName = new Set();
+
+        for (const Ctor of Chart.plugins) {
+            const instance = new Ctor();
+
+            if (!instance.name || pluginName.has(instance.name)) {
+                console.warn('[Chart plugin init] Plugin not has name or already registered with same name:' + instance.name);
+                continue;
+            }
+
+            pluginName.add(instance.name);
+            this._plugins.push(instance);
+        }
+
+        for (const external of externalPlugins) {
+            if (!external.name || pluginName.has(external.name)) {
+                console.warn('[Chart plugin init] External Plugin not has name or already registered with same name:' + external.name);
+                continue;
+            }
+
+            this._plugins.push(external);
+        }
+    }
+
+    protected init() {
+        this.parse();
+
+        this._activePlugins.length = 0;
+
+        for (const plugin of this._plugins) {
+            if (!plugin.init(this)) {
+                continue;
+            }
+
+            this._activePlugins.push(plugin);
+
+            if (plugin.node) {
+                this.addChild(plugin.node);
+            }
+        }
+
+        this.sortChildren();
+    }
+
+    protected update() {
+        let needDraw = false;
+
+        for (const plugin of this._activePlugins) {
+            const nextDraw = plugin.update && plugin.update();
+
+            needDraw = needDraw || nextDraw;
+        }
+
+        if (needDraw) {
+            for (const plugin of this._activePlugins) {
+                plugin.draw && plugin.draw();
+            }
+        }
+    }
+
+    public reset() {
+        for (const plugin of this._activePlugins) {
+            plugin.reset && plugin.reset();
+        }
+
+        // remove all childs
+        this.removeChildren();
+        this._activePlugins.length = 0;
+    }
+
+    public destroy(_options?: IDestroyOptions | boolean): void {
+        super.destroy(_options);
+
+        this.reset();
+
+        for (const plugin of this._plugins) {
+            plugin.dispose && plugin.dispose();
+        }
+
+        this._plugins.length = 0;
+
+        this.emit(CHART_EVENTS.DESTROY, this);
     }
 
     private transformRange() {
@@ -263,12 +336,7 @@ export class Chart extends Container {
     }
 
     public setViewport (x: number, y: number, width: number, height: number): void {
-        this.viewport.x = x;
-        this.viewport.y = y;
-        this.viewport.width = width;
-        this.viewport.height = height;
-        this.hitArea = this.viewport;
-
+        this.hitArea = new Rectangle(x, y, width, height);
         this.limits.set({
             fromX: x, fromY: y, toX: x + width, toY: y + height
         });
@@ -279,13 +347,25 @@ export class Chart extends Container {
         this._emitUpdate();
     }
 
-    public destroy(_options?: IDestroyOptions | boolean): void {
-        this.emit(CHART_EVENTS.DESTROY, this);
+    public getDrawerPluginByName<T extends IDrawerPlugin> (name: string, activeOnly = false): T | null {
+        return (activeOnly ? this._activePlugins : this._plugins).find(e => e.name === name) as T;
+    }
 
-        super.destroy(_options);
+    public getDrawerPluginByClass<T extends IDrawerPlugin> (classType: typeof BaseDrawer, activeOnly = false): T | null {
+        return (activeOnly ? this._activePlugins : this._plugins).find(e => e.constructor === classType) as T;
     }
 
     private _emitUpdate(): void {
+        this.update();
         this.emit(CHART_EVENTS.UPDATE, this);
     }
 }
+
+// Register Data plugins
+PluggableProvider.registerPlugin(DataTransformPlugin);
+
+// register a Chart drawer plugin
+Chart.registerPlugin(GridDrawer);
+Chart.registerPlugin(LineDrawer);
+Chart.registerPlugin(AreaDrawer);
+Chart.registerPlugin(LabelsDrawer);

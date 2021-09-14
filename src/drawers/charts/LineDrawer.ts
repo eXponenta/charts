@@ -1,37 +1,40 @@
 import { hex2rgb, rgb2hex } from "@pixi/utils";
 import { LINE_JOIN } from "@pixi/graphics";
 
-import { TARGET_TYPE } from "../../core/TARGET_TYPE";
-import { CHART_TYPE } from "../../core/CHART_TYPE";
-
-import { BasePIXIDrawer } from "../BasePIXIDrawer";
 import { Plot } from "../../../pixi-candles/src";
-import { IArrayChainData, IDataFetchResult } from "../../core";
+import { IArrayChainData, IDataFetchResult } from "../../core/Chart";
+import { CHART_TYPE } from '../../core/CHART_TYPE';
+import { BaseDrawer } from "../BaseDrawer";
 
-export class LineDrawer extends BasePIXIDrawer {
-    public static readonly CHART_TYPE = CHART_TYPE.LINE;
-    public static readonly TARGET_TYPE = TARGET_TYPE.CHART;
+import type { Chart } from  '../../core/Chart';
 
-    private _lastDirtyId = 0;
-    private _dirtyId = -1;
-
+export class LineDrawer extends BaseDrawer {
+    public readonly name = 'LineDrawer';
     public readonly node: Plot = new Plot(null);
     public lastDrawedFetch: IDataFetchResult<IArrayChainData>;
+
+    public init(context: Chart): boolean {
+        super.init(context);
+
+        return (
+            context.options.type === CHART_TYPE.AREA ||
+            context.options.type === CHART_TYPE.LINE
+        );
+    }
 
     /**
      *
      * @param force - Update any case, no check a alpha === 0
      */
-    public update(force = false) {
+    public update(force = false): boolean {
         const node = this.node;
         const {
             fromX, toX
-        } = this.chart.range;
+        } = this.context.range;
 
         const {
             dataProvider,
-            viewport
-        } = this.chart;
+        } = this.context;
 
         const style = this.getParsedStyle();
 
@@ -70,6 +73,8 @@ export class LineDrawer extends BasePIXIDrawer {
             }
         }
 
+        super.update()
+        return true;
     }
 
     reset() {

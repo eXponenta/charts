@@ -2,41 +2,57 @@ import { Container } from "@pixi/display";
 import { rgb2hex } from "@pixi/utils";
 import { PlotGradient } from "../../../pixi-candles/src";
 
-import { BasePIXIDrawer } from "../BasePIXIDrawer";
-import type { Chart } from "../../core/Chart";
-import { CHART_TYPE } from "../../core/CHART_TYPE";
-import { TARGET_TYPE } from "../../core/TARGET_TYPE";
-
 import { LineDrawer } from "./LineDrawer";
+import { BaseDrawer } from "../BaseDrawer";
+import { CHART_TYPE } from "../../core/CHART_TYPE";
+import type { Chart } from "../../core/Chart";
 
-export class AreaDrawer extends BasePIXIDrawer {
-    public static readonly TARGET_TYPE: TARGET_TYPE = TARGET_TYPE.CHART;
-    public static readonly CHART_TYPE: CHART_TYPE = CHART_TYPE.AREA;
-
+export class AreaDrawer extends BaseDrawer {
+    public readonly name = 'AreaDrawer';
     public readonly node = new Container();
-    private readonly _areaNode: PlotGradient;
-    private readonly _lineDrawer: LineDrawer;
+    private _areaNode: PlotGradient;
+    private _lineDrawer: LineDrawer;
+    private _localDrawer: boolean = false;
 
-    constructor(chart: Chart) {
-        super(chart);
+    constructor() {
+        super();
+    }
 
-        this._lineDrawer = new LineDrawer(chart);
-        // update will trigger from this
-        this._lineDrawer.unlink();
+    init (context: Chart): boolean {
+        super.init(context);
+
+        if (context.options.type !== CHART_TYPE.AREA) {
+            return  false;
+        }
+
+        this._lineDrawer = context.getDrawerPluginByClass<LineDrawer>(LineDrawer);
+        this._localDrawer = false;
+
         this._areaNode = new PlotGradient();
         this._areaNode.masterPlot = this._lineDrawer.node;
 
-        this.node.addChild(
-            this._areaNode,
-            this._lineDrawer.node
-        );
+        if (!this._lineDrawer) {
+            this._localDrawer = true;
+            this._lineDrawer = new LineDrawer();
+            this._lineDrawer.init(this.context);
+
+            this.node.addChild(
+                this._lineDrawer.node
+            );
+        }
+
+        this.node.zIndex = this._lineDrawer.node.zIndex - 1;
+        this.node.addChild(this._areaNode);
+
+        return true;
     }
 
-    public update() {
+    public update(): boolean {
         const style = this.getParsedStyle();
         const area = this._areaNode;
 
-        this._lineDrawer.update(true);
+        if (this._localDrawer)
+            this._lineDrawer.update(true);
 
         const fillColor = rgb2hex(style.fill as number[]);
         const fillAlpha = (<number[]> style.fill)[3];
@@ -47,11 +63,13 @@ export class AreaDrawer extends BasePIXIDrawer {
 
         area.coordTop = 0;
 
-        const viewport = this.chart.viewport;
+        const viewport = this.context.limits;
         const dataBounds = this._lineDrawer.lastDrawedFetch.dataBounds;
 
         area.coordBottom = Math.max(viewport.height - dataBounds.fromY, viewport.height);
 
         area.tint = 0x1571D6;
+
+        return true;
     }
 }
