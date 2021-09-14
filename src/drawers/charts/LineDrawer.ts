@@ -2,7 +2,7 @@ import { hex2rgb, rgb2hex } from "@pixi/utils";
 import { LINE_JOIN } from "@pixi/graphics";
 
 import { Plot } from "../../../pixi-candles/src";
-import { IArrayChainData, IDataFetchResult } from "../../core/Chart";
+import {IArrayChainData, IDataFetchResult, IObjectData} from "../../core/Chart";
 import { CHART_TYPE } from '../../core/CHART_TYPE';
 import { BaseDrawer } from "../BaseDrawer";
 
@@ -11,7 +11,7 @@ import type { Chart } from  '../../core/Chart';
 export class LineDrawer extends BaseDrawer {
     public readonly name = 'LineDrawer';
     public readonly node: Plot = new Plot(null);
-    public lastDrawedFetch: IDataFetchResult<IArrayChainData>;
+    public lastDrawedFetch: IDataFetchResult<IObjectData>;
 
     public init(context: Chart): boolean {
         super.init(context);
@@ -63,8 +63,8 @@ export class LineDrawer extends BaseDrawer {
         hex2rgb(0xffffff, node.shader.uniforms.uGeomColor);
 
         for (let i = 0; i < data.length; i ++) {
-            const x = data[i][0];
-            const y = data[i][1];
+            const x = +data[i].x;
+            const y = +data[i].y;
 
             if (i === 0) {
                 node.moveTo(x, y);

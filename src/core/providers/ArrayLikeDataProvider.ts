@@ -1,4 +1,4 @@
-import { IArrayChainData, IData, IDataFetchResult, IDataProvider, ILabelData } from "../Chart";
+import { IArrayChainData, IData, IDataFetchResult, IDataProvider, ILabelData, IObjectData } from "../Chart";
 
 export class ArrayLikeDataProvider implements IDataProvider {
     constructor(
@@ -6,7 +6,7 @@ export class ArrayLikeDataProvider implements IDataProvider {
         public readonly label = false,
         public step = 10) {}
 
-    fetch (from: number = 0, to: number = this.data.length - 1): IDataFetchResult<IArrayChainData> {
+    fetch (from: number = 0, to: number = this.data.length - 1): IDataFetchResult<IObjectData> {
         const arrayLike = this.data as Array<any>;
 
         to = to || (arrayLike.length - 1);
@@ -14,7 +14,7 @@ export class ArrayLikeDataProvider implements IDataProvider {
 
         if (this.label) {
             return {
-                data: arrayLike.slice(from, to) as IArrayChainData,
+                data: arrayLike.slice(from, to) as IObjectData,
                 fromX: from,
                 toX: to,
                 dataBounds: {
@@ -32,16 +32,16 @@ export class ArrayLikeDataProvider implements IDataProvider {
                     minY = Math.min(e, minY);
                     maxY = Math.max(e, maxY);
 
-                    return [ (i + from) * this.step, e];
+                    return { x: (i + from) * this.step, y: e };
                 });
 
         return {
-            data: data as IArrayChainData,
+            data: data as IObjectData,
             fromX: from,
             toX: to,
             dataBounds: {
-                fromX: data[0][0],
-                toX: data[data.length - 1][0],
+                fromX: data[0].x,
+                toX: data[data.length - 1].x,
                 fromY: minY,
                 toY: maxY
             }

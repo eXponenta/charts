@@ -31,17 +31,53 @@ export class DataTransformPlugin implements IDataPlugin {
 			fromX, fromY, width, height
 		} = this.context.chart.range;
 
+		let {
+		    fromX: limitLeft,
+            toX: limitRight
+        } = this.context.chart.limits;
+
 		const b = source.dataBounds;
 		const dw = b.toX - b.fromX || 1;
 		const dh = b.toY - b.fromY || 1;
 
 		const sx = width / dw;
 		const sy = height / dh;
+		const output = [];
 
-		return data.map(dataEntry => ([
-			fromX + dataEntry[0] * sx,
-			height - (fromY + dataEntry[1] * sy) // flip
-		]));
+		const transform = ({ x, y } : {x: number, y: number}) => {
+		    return {
+                x: fromX + x * sx,
+                y: height - (fromY + y * sy), // flip
+            }
+        };
+
+		for (let i = 0; i < data.length; i ++) {
+		    const current = transform(data[i]);
+
+            if (this.reduceXRange) {
+                if (current.x < limitRight && (i + 1) < data.length) {
+                    const next = transform(data[i + 1]);
+
+                    if (next.x < limitLeft) {
+                        continue;
+                    }
+                }
+
+                if (current.x > limitRight && i > 0) {
+                    const prev = transform(data[i - 1]);
+
+                    if (prev.x > limitRight) {
+                        continue;
+                    }
+                }
+            }
+
+            output.push(
+                current
+            );
+        }
+
+		return output;
 	}
 
 	/**

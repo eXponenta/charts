@@ -1,5 +1,5 @@
-import type {Chart, IArrayChainData, IDataFetchResult, IDataProvider} from "../Chart";
-import {IDataPlugin, IFunctionDataPlugin} from "../plugins/IDataPlugin";
+import type { Chart, IArrayChainData, IDataFetchResult, IDataProvider, IObjectData } from "../Chart";
+import { IDataPlugin, IFunctionDataPlugin } from "../plugins/IDataPlugin";
 
 /**
  * Validate a type of plugin and return valid plugin
@@ -145,7 +145,7 @@ export class PluggableProvider implements IDataProvider, IDataPlugin {
         return result;
     }
 
-    public fetch(from?: number, to?: number): IDataFetchResult<IArrayChainData> {
+    public fetch(from?: number, to?: number): IDataFetchResult<IObjectData> {
         this.init();
 
         const source = this.sourceProvider.fetch(from, to);

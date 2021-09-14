@@ -44,7 +44,7 @@ export interface ILabelDataProvider {
 }
 
 export interface IDataProvider extends IDataSetModel {
-    fetch(from?: number, to?: number): IDataFetchResult<IArrayChainData>;
+    fetch(from?: number, to?: number): IDataFetchResult<IObjectData>;
 }
 
 const DEFAULT_STYLE: IChartStyle = {

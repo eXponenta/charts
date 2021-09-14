@@ -1,4 +1,4 @@
-import {IArrayChainData, IData, IDataFetchResult, IDataProvider} from "../Chart";
+import { IArrayChainData, IData, IDataFetchResult, IDataProvider, IObjectData } from "../Chart";
 
 export class ArrayChainDataProvider implements IDataProvider {
 
@@ -11,10 +11,10 @@ export class ArrayChainDataProvider implements IDataProvider {
         const chain = this.data as IArrayChainData;
         const entry = chain[index];
 
-        return this.label ? entry[0] : entry;
+        return this.label ? entry[0] : { x: entry[0], y: entry[1] };
     }
 
-    fetch(from: number = 0, to?: number): IDataFetchResult<IArrayChainData>{
+    fetch(from: number = 0, to?: number): IDataFetchResult<IObjectData>{
         const chain = this.data as IArrayChainData;
 
         to = to || (chain.length - 1);
@@ -31,10 +31,10 @@ export class ArrayChainDataProvider implements IDataProvider {
             data[i] = this._fetchValueInternal(i + from);
 
             if (!this.label) {
-                minX = Math.min(data[i][0], minX);
-                minY = Math.min(data[i][1], minY);
-                maxX = Math.max(data[i][0], maxX);
-                maxY = Math.max(data[i][1], maxY);
+                minX = Math.min(data[i].x, minX);
+                minY = Math.min(data[i].y, minY);
+                maxX = Math.max(data[i].x, maxX);
+                maxY = Math.max(data[i].y, maxY);
             }
         }
 
