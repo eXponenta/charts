@@ -3,11 +3,13 @@ import { InteractionManager } from "@pixi/interaction";
 import { Container } from "@pixi/display";
 
 import { Chart, CHART_EVENTS } from "./core";
+import {Ticker, UPDATE_PRIORITY} from "@pixi/ticker";
 
 Renderer.registerPlugin('batch', BatchRenderer);
 Renderer.registerPlugin('interaction', InteractionManager);
 
 export class ChartApp {
+    readonly ticker: Ticker = new Ticker();
     readonly renderer: Renderer;
     readonly stage: Container = new Container();
     readonly size: {
@@ -33,6 +35,7 @@ export class ChartApp {
             useContextAlpha: true,
         });
 
+        this.update = this.update.bind(this);
         this.draw = this.draw.bind(this);
         this.onDimensionUpdate = this.onDimensionUpdate.bind(this);
         this.onChartUpdate = this.onChartUpdate.bind(this);
@@ -40,6 +43,11 @@ export class ChartApp {
 
         //@ts-ignore
         new self.ResizeObserver(this.onDimensionUpdate).observe(view);
+
+        this.ticker.add(this.update);
+        this.ticker.add(this.draw, UPDATE_PRIORITY.LOW);
+
+        this.ticker.start();
     }
 
     private onDimensionUpdate () {
@@ -57,7 +65,8 @@ export class ChartApp {
     }
 
     private onChartUpdate(chart: Chart) {
-        this.draw();
+        // nothing
+        // this.draw();
     }
 
     public addChart(chart: Chart, name = 'chart_' + this.stage.children.length): Chart {
@@ -72,8 +81,6 @@ export class ChartApp {
 
         this.stage.addChild(chart);
 
-        this.draw();
-
         return chart;
     }
 
@@ -83,9 +90,7 @@ export class ChartApp {
         if (chart) {
             this._unbindEvents(chart);
             this.stage.removeChild(chart)
-            this.draw();
         }
-
 
         return chart;
     }
@@ -100,8 +105,24 @@ export class ChartApp {
         chart.on(CHART_EVENTS.DESTROY, this.removeChart);
     }
 
-    public draw() {
-        this.renderer.render(this.stage);
+    protected update() {
+        for (const chart of this.stage.children) {
+            (<Chart> chart).update();
+        }
+    }
+
+    protected draw() {
+        let dirtyCharts = 0;
+
+        for (const chart of this.stage.children) {
+            if((<Chart> chart).draw()) {
+                dirtyCharts ++;
+            }
+        }
+
+        if (dirtyCharts !== 0) {
+            this.renderer.render(this.stage);
+        }
     }
 }
 

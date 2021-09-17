@@ -124,6 +124,17 @@ export class Chart extends Container {
     private readonly _plugins: IDrawerPlugin[] = [];
     private readonly _activePlugins: IDrawerPlugin[] = [];
 
+    private _updateId: number = -1;
+    private _drawId: number = -1;
+
+    public get updateId(): number {
+        return this._updateId;
+    }
+
+    public get drawId(): number {
+        return this._drawId;
+    }
+
     constructor (
         public readonly options: IChartDataOptions,
         plugins: IDrawerPlugin[] = [],
@@ -194,20 +205,33 @@ export class Chart extends Container {
         this.sortChildren();
     }
 
-    protected update() {
-        let needDraw = false;
+    public update(): boolean {
+        if (this._updateId === 0) {
+            return false;
+        }
 
         for (const plugin of this._activePlugins) {
-            const nextDraw = plugin.update && plugin.update();
-
-            needDraw = needDraw || nextDraw;
-        }
-
-        if (needDraw) {
-            for (const plugin of this._activePlugins) {
-                plugin.draw && plugin.draw();
+            if (plugin.update && plugin.update()) {
+                this._drawId ++;
             }
         }
+
+        this._updateId = 0;
+        return true;
+    }
+
+    public draw(): boolean {
+        if (this._drawId === 0) {
+            return false;
+        }
+
+        for (const plugin of this._activePlugins) {
+            plugin.draw && plugin.draw();
+        }
+
+        this._drawId = 0;
+
+        return true;
     }
 
     public reset() {
@@ -218,6 +242,8 @@ export class Chart extends Container {
         // remove all childs
         this.removeChildren();
         this._activePlugins.length = 0;
+
+        this._drawId = this._updateId = -1;
     }
 
     public destroy(_options?: IDestroyOptions | boolean): void {
@@ -258,7 +284,6 @@ export class Chart extends Container {
         this._rangeScale.y *= scaleY;
 
         this.transformRange();
-
     }
 
     private onDrag(event: InteractionEvent): void {
@@ -356,7 +381,7 @@ export class Chart extends Container {
     }
 
     private _emitUpdate(): void {
-        this.update();
+        this._updateId ++;
         this.emit(CHART_EVENTS.UPDATE, this);
     }
 }
