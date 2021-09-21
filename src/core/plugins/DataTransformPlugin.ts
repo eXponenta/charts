@@ -44,10 +44,11 @@ export class DataTransformPlugin implements IDataPlugin {
 		const sy = height / dh;
 		const output = [];
 
-		const transform = ({ x, y } : {x: number, y: number}) => {
+		const transform = ({ x, y, ...other } : {x: number, y: number}) => {
 		    return {
-                x: fromX + x * sx,
-                y: height - (fromY + y * sy), // flip
+		        ...other,
+                x: fromX + (x - b.fromX) * sx,
+                y: height - (fromY + (y - b.fromY) * sy), // flip
             }
         };
 

@@ -3,15 +3,20 @@ import { IArrayChainData, IData, IDataFetchResult, IDataProvider, IObjectData } 
 export class ArrayChainDataProvider implements IDataProvider {
 
     constructor (
-        public data: IData,
-        public readonly label = false,
+        public data: IData
     ) {}
 
-    protected _fetchValueInternal (index: number): any {
+    protected _fetchValueInternal (index: number): IObjectData[0] {
         const chain = this.data as IArrayChainData;
         const entry = chain[index];
 
-        return this.label ? entry[0] : { x: entry[0], y: entry[1] };
+        return {
+            x: +entry[0],
+            y: +entry[1],
+            labelX: entry[0],
+            labelY: entry[1],
+            index
+        };
     }
 
     fetch(from: number = 0, to?: number): IDataFetchResult<IObjectData>{
@@ -30,25 +35,23 @@ export class ArrayChainDataProvider implements IDataProvider {
         for (let i = 0; i < to - from; i ++) {
             data[i] = this._fetchValueInternal(i + from);
 
-            if (!this.label) {
-                minX = Math.min(data[i].x, minX);
-                minY = Math.min(data[i].y, minY);
-                maxX = Math.max(data[i].x, maxX);
-                maxY = Math.max(data[i].y, maxY);
-            }
+            minX = Math.min(data[i].x, minX);
+            minY = Math.min(data[i].y, minY);
+            maxX = Math.max(data[i].x, maxX);
+            maxY = Math.max(data[i].y, maxY);
         }
 
-        return {
+        return Object.freeze({
             data: data,
             fromX: from,
             toX: to,
-            dataBounds: {
+            dataBounds: Object.freeze({
                 fromX: minX,
                 fromY: minY,
                 toX: maxX,
                 toY: maxY
-            }
-        };
+            })
+        });
     }
 }
 

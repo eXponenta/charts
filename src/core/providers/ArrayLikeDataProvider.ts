@@ -32,19 +32,27 @@ export class ArrayLikeDataProvider implements IDataProvider {
                     minY = Math.min(e, minY);
                     maxY = Math.max(e, maxY);
 
-                    return { x: (i + from) * this.step, y: e };
+                    const x = (i + from) * this.step;
+                    const y = e;
+                    return {
+                        x,
+                        y,
+                        labelX: x,
+                        labelY: y,
+                        index: i + from
+                    };
                 });
 
-        return {
+        return Object.freeze({
             data: data as IObjectData,
             fromX: from,
             toX: to,
-            dataBounds: {
+            dataBounds: Object.freeze({
                 fromX: data[0].x,
                 toX: data[data.length - 1].x,
                 fromY: minY,
                 toY: maxY
-            }
-        };
+            })
+        });
     }
 }

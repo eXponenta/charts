@@ -1,4 +1,4 @@
-import { Point, Rectangle } from "@pixi/math";
+import {Matrix, Point, Rectangle} from "@pixi/math";
 import { LINE_JOIN } from "@pixi/graphics";
 import { Container, IDestroyOptions } from "@pixi/display";
 import { InteractionEvent} from "@pixi/interaction";
@@ -24,7 +24,13 @@ import { LabelsDrawer } from "../drawers/labels/LabelsDrawer";
 export type ILabelData = Array<string | Date | number>;
 export type IArrayData = ArrayLike<number>;
 export type IArrayChainData = Array<[number, number]>;
-export type IObjectData = Array<{ x: number | Date | string, y: number }>
+export type IObjectData = Array<{
+    x: number,
+    y: number,
+    index?: number,
+    labelX?: number | string | Date,
+    labelY?: number | string | Date
+}>
 
 export interface IDataFetchResult <T> {
     data: T;
@@ -47,18 +53,44 @@ export interface IDataProvider extends IDataSetModel {
     fetch(from?: number, to?: number): IDataFetchResult<IObjectData>;
 }
 
+export enum LABEL_LOCATION {
+    NONE = 'none',
+    TOP = 'top',
+    BOTTOM = 'bottom',
+    LEFT = 'left',
+    RIGHT = 'right'
+}
+
+const DEFAUTL_LABELS_STYLE = {
+    x: {
+        position: LABEL_LOCATION.BOTTOM,
+    },
+    y: {
+        position: LABEL_LOCATION.LEFT
+    }
+};
+
 const DEFAULT_STYLE: IChartStyle = {
     fill: 0x0,
     stroke: 0x0,
     thickness: 2,
-    lineJoint: LINE_JOIN.BEVEL
+    lineJoint: LINE_JOIN.BEVEL,
+    labels: DEFAUTL_LABELS_STYLE,
 };
 
 export interface IChartStyle {
     fill?: number | string | [number, number, number, number];
     stroke?: number  | string | [number, number, number, number];
-    thickness?: number,
+    thickness?: number;
     lineJoint?: string;
+    labels?: {
+        y?: {
+            position: LABEL_LOCATION;
+        } | null,
+        x?: {
+            position: LABEL_LOCATION;
+        } | null
+    }
 }
 
 export interface IChartDataOptions {
@@ -92,6 +124,11 @@ function validate(options: IChartDataOptions): IChartDataOptions {
     const joint = result.style.lineJoint;
     result.style.lineJoint = isValidEnum(joint, LINE_JOIN) ? joint : LINE_JOIN.BEVEL;
 
+    result.style.labels = {
+        x: {...DEFAUTL_LABELS_STYLE.x }, y: {...DEFAUTL_LABELS_STYLE.y },
+        ...(options.style.labels || {})
+    };
+
     return result;
 }
 
@@ -113,7 +150,6 @@ export class Chart extends Container {
     public readonly limits: Range = new Range();
 
     public dataProvider: PluggableProvider;
-    public labelProvider: PluggableProvider;
 
     private _lastPressedMousePoint: Point;
     private _lastMousePoint: Point;
@@ -315,7 +351,6 @@ export class Chart extends Container {
         const labels = this.options.labels;
 
         let dataProvider: IDataProvider;
-        let labelProvider: ILabelDataProvider;
 
         let primitiveData: IData;
 
@@ -323,7 +358,6 @@ export class Chart extends Container {
         if ('data' in data) {
             if ('fetch' in data) {
                 dataProvider = data;
-                labelProvider = labels as any;
             } else {
                 primitiveData = data.data;
             }
@@ -336,26 +370,20 @@ export class Chart extends Container {
 
             // array like
             if (Array.isArray(firstEntry) && firstEntry.length === 2) {
-                dataProvider = new ArrayChainDataProvider(primitiveData, false);
-                labelProvider = new ArrayChainDataProvider(primitiveData, true) as any;
+                dataProvider = new ArrayChainDataProvider(primitiveData);
 
             } else if (typeof firstEntry === 'object' && ('x' in <any>firstEntry) && ('y' in <any>firstEntry)) {
                 // object like
 
-                dataProvider = new ObjectDataProvider(primitiveData, false);
-                labelProvider = new ObjectDataProvider(primitiveData, true) as any;
+                dataProvider = new ObjectDataProvider(primitiveData);
             } else {
 
                 // is array
                 dataProvider = new ArrayLikeDataProvider(primitiveData);
-
-                // TODO Generate a labels when it not present
-                labelProvider = new ArrayLikeDataProvider(labels as IArrayData, true) as any;
             }
         }
 
         this.dataProvider = new PluggableProvider(dataProvider, this);
-        this.labelProvider = new PluggableProvider(labelProvider as any, this) as any;
 
         this._emitUpdate();
     }
