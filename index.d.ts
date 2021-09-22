@@ -2,14 +2,15 @@ import { Container } from '@pixi/display';
 import { DisplayObject } from '@pixi/display';
 import { EventEmitter } from '@pixi/utils';
 import { IDestroyOptions } from '@pixi/display';
+import { InteractionManager } from '@pixi/interaction';
 import { Renderer } from '@pixi/core';
+import { Ticker } from '@pixi/ticker';
 
 export declare class ArrayChainDataProvider implements IDataProvider {
     data: IData;
-    readonly label: boolean;
-    constructor(data: IData, label?: boolean);
-    protected _fetchValueInternal(index: number): any;
-    fetch(from?: number, to?: number): IDataFetchResult<IArrayChainData>;
+    constructor(data: IData);
+    protected _fetchValueInternal(index: number): IObjectData[0];
+    fetch(from?: number, to?: number): IDataFetchResult<IObjectData>;
 }
 
 export declare class ArrayLikeDataProvider implements IDataProvider {
@@ -17,7 +18,7 @@ export declare class ArrayLikeDataProvider implements IDataProvider {
     readonly label: boolean;
     step: number;
     constructor(data: IData, label?: boolean, step?: number);
-    fetch(from?: number, to?: number): IDataFetchResult<IArrayChainData>;
+    fetch(from?: number, to?: number): IDataFetchResult<IObjectData>;
 }
 
 export declare class BaseDrawer implements IDrawerPlugin {
@@ -31,27 +32,37 @@ export declare class BaseDrawer implements IDrawerPlugin {
     protected getParsedStyle(): IChartStyle;
 }
 
+declare abstract class BaseInput extends EventEmitter {
+    abstract register(chart: Chart): void;
+    abstract unregister(chart: Chart): void;
+    abstract update(deltaTime: number): void;
+}
+
 export declare class Chart extends Container {
     readonly options: IChartDataOptions;
-    name: string;
     protected static plugins: typeof BaseDrawer[];
     static registerPlugin(plugin: typeof BaseDrawer): boolean;
+    name: string;
+    input: BaseInput | null;
     readonly range: Range_2;
     readonly limits: Range_2;
     dataProvider: PluggableProvider;
-    labelProvider: PluggableProvider;
     private _lastPressedMousePoint;
     private _lastMousePoint;
-    private _rangeScale;
-    private _rangeTranslate;
     private readonly _plugins;
     private readonly _activePlugins;
+    private _updateId;
+    private _drawId;
+    get updateId(): number;
+    get drawId(): number;
     constructor(options: IChartDataOptions, plugins?: IDrawerPlugin[]);
     protected preparePlugins(externalPlugins: IDrawerPlugin[]): void;
     protected init(): void;
-    protected update(): void;
+    update(): boolean;
+    draw(): boolean;
     reset(): void;
     destroy(_options?: IDestroyOptions | boolean): void;
+    private scaleAtPoint;
     private transformRange;
     private onWheel;
     private onDrag;
@@ -76,12 +87,14 @@ export declare enum CHART_TYPE {
 }
 
 export declare class ChartApp {
+    readonly ticker: Ticker;
     readonly renderer: Renderer;
     readonly stage: Container;
     readonly size: {
         width: number;
         height: number;
     };
+    readonly input: PixiInput;
     constructor(canvasOrId: HTMLCanvasElement | string);
     private onDimensionUpdate;
     private onChartUpdate;
@@ -89,7 +102,8 @@ export declare class ChartApp {
     removeChart(name: string): Chart;
     private _unbindEvents;
     private _bindEvents;
-    draw(): void;
+    protected update(): void;
+    protected draw(): void;
 }
 
 export declare class DataTransformPlugin implements IDataPlugin {
@@ -97,9 +111,12 @@ export declare class DataTransformPlugin implements IDataPlugin {
     private context;
     readonly reduceXRange = true;
     init(context: PluggableProvider): boolean;
-    processElements(data: any[], source: IDataFetchResult<any>): any;
-    processResult(result: IDataFetchResult<any>, _source: IDataFetchResult<any>): IDataFetchResult<any>;
+    processElements(result: DataTransformPluginResult, source: IDataFetchResult<IObjectData>): DataTransformPluginResult;
 }
+
+declare type DataTransformPluginResult = IDataFetchResult<IObjectData> & {
+    trimmedSourceBounds?: IRangeObject;
+};
 
 export declare type IArrayChainData = Array<[number, number]>;
 
@@ -117,6 +134,16 @@ export declare interface IChartStyle {
     stroke?: number | string | [number, number, number, number];
     thickness?: number;
     lineJoint?: string;
+    labels?: {
+        y?: {
+            position: LABEL_LOCATION;
+        } | null;
+        x?: {
+            position: LABEL_LOCATION;
+        } | null;
+    };
+    clamp: boolean;
+    fitYRange: boolean;
 }
 
 export declare type IData = IArrayData | IArrayChainData | IObjectData;
@@ -131,12 +158,11 @@ export declare interface IDataFetchResult<T> {
 export declare interface IDataPlugin {
     name: string;
     init?(context: PluggableProvider): boolean;
-    processElements?(data: any[], source: IDataFetchResult<any>): any[];
-    processResult?(result: IDataFetchResult<any>, source: IDataFetchResult<any>): IDataFetchResult<any>;
+    processElements?(result: IDataFetchResult<IObjectData>, source: IDataFetchResult<IObjectData>): IDataFetchResult<IObjectData>;
 }
 
 export declare interface IDataProvider extends IDataSetModel {
-    fetch(from?: number, to?: number): IDataFetchResult<IArrayChainData>;
+    fetch(from?: number, to?: number): IDataFetchResult<IObjectData>;
 }
 
 export declare interface IDataSetModel {
@@ -153,7 +179,7 @@ export declare interface IDrawerPlugin {
     dispose?(): void;
 }
 
-export declare type IFunctionDataPlugin = (data: any[], source: IDataFetchResult<any>) => any[];
+export declare type IFunctionDataPlugin = (result: IDataFetchResult<IObjectData>, source: IDataFetchResult<any>) => IDataFetchResult<IObjectData>;
 
 export declare type ILabelData = Array<string | Date | number>;
 
@@ -162,8 +188,11 @@ export declare interface ILabelDataProvider {
 }
 
 export declare type IObjectData = Array<{
-    x: number | Date | string;
+    x: number;
     y: number;
+    index?: number;
+    labelX?: number | string | Date;
+    labelY?: number | string | Date;
 }>;
 
 export declare interface IRangeObject {
@@ -173,8 +202,23 @@ export declare interface IRangeObject {
     toY?: number;
 }
 
+export declare interface IRangeTransform {
+    sx: number;
+    sy: number;
+    tx: number;
+    ty: number;
+}
+
+export declare enum LABEL_LOCATION {
+    NONE = "none",
+    TOP = "top",
+    BOTTOM = "bottom",
+    LEFT = "left",
+    RIGHT = "right"
+}
+
 export declare class ObjectDataProvider extends ArrayChainDataProvider {
-    protected _fetchValueInternal(index: number): any;
+    protected _fetchValueInternal(index: number): IObjectData[0];
 }
 
 export declare class Observable<T> extends EventEmitter {
@@ -192,6 +236,23 @@ export declare class Observable<T> extends EventEmitter {
 
 export declare function parseStyle(style: IChartStyle): IChartStyle;
 
+declare class PixiInput extends BaseInput {
+    readonly provider: InteractionManager;
+    private _charts;
+    private _eventsRegistered;
+    constructor(provider: InteractionManager);
+    private _attachEvents;
+    private _onWheel;
+    private _onPointerTap;
+    private _onPointerMove;
+    private _onPointerUp;
+    private _onPointerDown;
+    private _detachEvents;
+    register(chart: Chart): void;
+    unregister(chart: Chart): void;
+    update(deltaTime: number): void;
+}
+
 export declare class PluggableProvider implements IDataProvider, IDataPlugin {
     sourceProvider: IDataProvider;
     chart: Chart;
@@ -204,9 +265,8 @@ export declare class PluggableProvider implements IDataProvider, IDataPlugin {
     constructor(sourceProvider: IDataProvider, chart: Chart, plugins?: IDataPlugin[]);
     use(...sessionPlugins: (IDataPlugin | IFunctionDataPlugin)[]): void;
     init(): boolean;
-    processElements(data: any[], source: IDataFetchResult<any>): any;
-    processResult(result: IDataFetchResult<any>, source: IDataFetchResult<any>): IDataFetchResult<any>;
-    fetch(from?: number, to?: number): IDataFetchResult<IArrayChainData>;
+    processElements(result: IDataFetchResult<IObjectData>, source: IDataFetchResult<any>): IDataFetchResult<IObjectData>;
+    fetch(from?: number, to?: number): IDataFetchResult<IObjectData>;
 }
 
 declare class Range_2 extends Observable<IRangeObject> {
@@ -222,8 +282,10 @@ declare class Range_2 extends Observable<IRangeObject> {
     get width(): number;
     get height(): number;
     set({ fromX, fromY, toX, toY }?: IRangeObject): void;
-    scale(x: number, y: number): void;
-    translate(x: number, y: number): void;
+    scale(x: number, y?: number, limit?: Range_2): void;
+    translate(tx: number, ty?: number, limit?: Range_2): void;
+    decomposeFrom(source: Range_2): IRangeTransform;
+    clampToMin(limit: Range_2): void;
 }
 export { Range_2 as Range }
 
