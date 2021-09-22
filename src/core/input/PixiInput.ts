@@ -33,7 +33,7 @@ export class PixiInput extends BaseInput {
         p.on('pointertap', this._onPointerTap, this);
 
         // handle native wheel
-        document.addEventListener('wheel', this._onWheel);
+        document.addEventListener('wheel', this._onWheel, {passive: false});
 
         this._eventsRegistered = true;
 	}

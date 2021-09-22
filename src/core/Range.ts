@@ -1,10 +1,18 @@
 import { Observable } from "./Observable";
+import {Matrix} from "@pixi/math";
 
 export interface IRangeObject {
     fromX?: number;
     fromY?: number;
     toX?: number;
     toY?: number;
+}
+
+export interface IRangeTransform {
+    sx: number;
+    sy: number;
+    tx: number;
+    ty: number;
 }
 
 export class Range extends Observable<IRangeObject> {
@@ -45,34 +53,114 @@ export class Range extends Observable<IRangeObject> {
         this.suspended = false;
     }
 
-    public scale(x: number, y: number): void {
+    /**
+     * Scale current range
+     * @param x
+     * @param y
+     * @param limit
+     */
+    public scale(x: number, y: number = x, limit: Range = null): void {
+        const def = this.suspended;
+
         this.suspended = true;
-
-        /*
-        const w = x * (this._toX - this._fromX);
-        const h = y * (this._toY - this._fromY);
-
-        this.toX = this._fromX + w;
-        this.toY = this._fromY + h;
-        */
 
         this.toX *= x;
         this.toY *= y;
         this.fromX *= x;
         this.fromY *= y;
 
-        this.suspended = false;
+        if (limit) {
+            this.clampToMin(limit);
+        }
+
+        this.suspended = def;
     }
 
-    public translate(x: number, y: number): void {
+    /**
+     * Translate current range
+     * @param tx
+     * @param ty
+     * @param limit
+     */
+    public translate(tx: number, ty: number = 0, limit: Range = null): void {
+        const def = this.suspended;
+
         this.suspended = true;
 
-        this.fromX += x;
-        this.toX += x;
+        const {
+            _fromX, _fromY, _toX, _toY
+        } = this;
 
-        this.fromY += y;
-        this.toY += y;
+        if (limit) {
+            // looks to left and clamp min
+            if (tx > 0) {
+                this.fromX = Math.min(limit.fromX, this._fromX + tx);
+                this.toX = this.fromX + (_toX - _fromX);
+            // looks to right and clamp by max
+            } else if (tx < 0) {
+                this.toX = Math.max(this._toX + tx, limit.toX);
+                this.fromX = this.toX - (_toX - _fromX);
+            }
 
-        this.suspended = false;
+            // looks to left and clamp min
+            if (ty > 0) {
+                this.fromY = Math.min(limit.fromY, this._fromY + ty);
+                this.toY = this.fromY + (_toY - _fromY);
+                // looks to right and clamp by max
+            } else if (ty < 0) {
+                this.toY = Math.max(this._toY + ty, limit.toY);
+                this.fromY = this.toX - (_toY - _fromY);
+            }
+
+        } else {
+            this.fromX += tx;
+            this.toX += tx;
+
+            this.fromY += ty;
+            this.toY += ty;
+        }
+
+        this.suspended = def;
+    }
+
+    /**
+     * Compute transformation between this range and required
+     * @param source
+     */
+    public decomposeFrom (source: Range): IRangeTransform {
+        const t: IRangeTransform = {
+            sx: 1, sy: 1, tx: 0, ty: 0
+        };
+
+        t.sx = (this.width / source.width) || 1;
+        t.sy = (this.height / source.height) || 1;
+        t.tx = this.fromX - source.fromX;
+        t.ty = this.fromY - source.fromY
+
+        return t;
+    }
+
+    /**
+     * Clamp range by minimal allowed view. This means that range never bee less that limit
+     * This change a height/width, for clamping a position only use
+     * @see clampPosition
+     * @param { Range } limit target range limit
+     */
+    public clampToMin (limit: Range): void {
+        const def = this.suspended;
+
+        this.suspended = true;
+
+        const {
+            _fromX, _fromY, _toX, _toY
+        } = this;
+
+
+        this.fromX = Math.min (limit.fromX, _fromX);
+        this.fromY = Math.min (limit.fromY, _fromY);
+        this.toX = Math.max(limit.toX, _toX);
+        this.toY = Math.max(limit.toY, _toY);
+
+        this.suspended = def;
     }
 }

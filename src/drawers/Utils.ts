@@ -41,5 +41,5 @@ export function parseStyle (style: IChartStyle): IChartStyle {
         }
     }
 
-    return parsed;
+    return parsed as IChartStyle;
 }

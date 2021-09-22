@@ -77,6 +77,7 @@ const DEFAULT_STYLE: IChartStyle = {
     thickness: 2,
     lineJoint: LINE_JOIN.BEVEL,
     labels: DEFAUTL_LABELS_STYLE,
+    clamp: true
 };
 
 export interface IChartStyle {
@@ -91,7 +92,8 @@ export interface IChartStyle {
         x?: {
             position: LABEL_LOCATION;
         } | null
-    }
+    },
+    clamp: boolean
 }
 
 export interface IChartDataOptions {
@@ -170,9 +172,6 @@ export class Chart extends Container {
 
     private _lastPressedMousePoint: Point;
     private _lastMousePoint: Point;
-
-    private _rangeScale: Point = new Point(1, 1);
-    private _rangeTranslate: Point = new Point(0,0);
 
     private readonly _plugins: IDrawerPlugin[] = [];
     private readonly _activePlugins: IDrawerPlugin[] = [];
@@ -319,11 +318,31 @@ export class Chart extends Container {
         this.emit(CHART_EVENTS.DESTROY, this);
     }
 
-    private transformRange() {
+    private scaleAtPoint (point: Point, sx: number, sy: number) {
         this.range.suspended = true;
-        this.range.set(this.limits);
-        this.range.scale(this._rangeScale.x, this._rangeScale.y);
-        this.range.translate(this._rangeTranslate.x, this._rangeTranslate.y);
+
+        this.range.translate(-point.x, -point.y);
+        this.range.scale(sx, sy);
+        this.range.translate(point.x, point.y);
+
+        if (this.options.style.clamp) {
+            this.range.clampToMin(this.limits);
+        }
+        this.range.suspended = false;
+    }
+
+    private transformRange({
+        tx = 0, ty = 0, sx = 1, sy = 1
+    } = {}) {
+        const {
+            clamp
+        } = this.options.style;
+
+        this.range.suspended = true;
+
+        this.range.translate(tx, ty, clamp ?  this.limits : null);
+        this.range.scale(sx, sy, clamp ? this.limits : null);
+
         this.range.suspended = false;
     }
 
@@ -331,18 +350,11 @@ export class Chart extends Container {
         const scaleX = event.deltaY > 0 ? 1.1 : 0.9;
         const scaleY = 1;
 
-        const pos = this._lastMousePoint;
+        if (!this._lastMousePoint) {
+            return;
+        }
 
-        const dx = this._rangeTranslate.x - pos.x;
-        const dy = this._rangeTranslate.y - pos.y;
-
-        this._rangeTranslate.x -= (1 - scaleX) * dx;
-        this._rangeTranslate.y -= (1 - scaleY) * dy;
-
-        this._rangeScale.x *= scaleX;
-        this._rangeScale.y *= scaleY;
-
-        this.transformRange();
+        this.scaleAtPoint(this._lastMousePoint, scaleX, scaleY);
     }
 
     private onDrag(event: InteractionEvent): void {
@@ -352,10 +364,12 @@ export class Chart extends Container {
         if (original.buttons & 0x1) {
 
             if (this._lastPressedMousePoint) {
-                this._rangeTranslate.x += event.data.global.x - this._lastPressedMousePoint.x;
-                this._rangeTranslate.y -= event.data.global.y - this._lastPressedMousePoint.y;
+                const tx = event.data.global.x - this._lastPressedMousePoint.x;
+                const ty = -(event.data.global.y - this._lastPressedMousePoint.y);
 
-                this.transformRange();
+                this.transformRange({
+                    tx, ty
+                });
                 this._emitUpdate();
             }
 
@@ -417,7 +431,7 @@ export class Chart extends Container {
             fromX: x, fromY: y, toX: x + width, toY: y + height
         });
 
-        this.transformRange();
+        this.range.clampToMin(this.limits);
 
         this.emit(CHART_EVENTS.RESIZE, this);
         this._emitUpdate();

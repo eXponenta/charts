@@ -13,6 +13,8 @@ export class GridDrawer extends BaseDrawer {
         let qX = 100 * range.width / limits.width;
         let qY = 100;
 
+        if (qX * qY === 0) return ;
+
         if (qX > 200) {
             while (qX > 200)
                 qX /= 2;
