@@ -1,7 +1,7 @@
 import type { IDataPlugin } from "./IDataPlugin";
 import type { PluggableProvider } from "../providers";
 import type { IDataFetchResult, IObjectData } from "../Chart";
-import { Range } from '../Range';
+import type { IRangeObject } from '../Range';
 
 import generate from 'nice-ticks';
 
@@ -10,44 +10,41 @@ import generate from 'nice-ticks';
  */
 export class FancyLabelsPlugin implements IDataPlugin {
     public readonly name: string = 'FancyLabelsPlugin';
-    public readonly maxYTics: number = 10;
-    public readonly maxXTics: number = 10;
+    public maxYTics: number = 10;
+    public maxXTics: number = 10;
     private context: PluggableProvider;
+
+    private static _instance: FancyLabelsPlugin;
+    public static get instance() {
+        if (!this._instance) {
+            return this._instance = new FancyLabelsPlugin();
+        }
+
+        return this._instance;
+    }
 
     init (context: PluggableProvider): boolean {
         this.context = context;
         return true;
     }
 
-    processElements(result: IDataFetchResult<IObjectData>, source: IDataFetchResult<IObjectData>): IDataFetchResult<IObjectData> {
+    processElements(result: IDataFetchResult<IObjectData> & {trimmedSourceBounds?: IRangeObject}, source: IDataFetchResult<IObjectData>): IDataFetchResult<IObjectData> {
         const data: IObjectData = [];
-        const  {
-            fromX, fromY, toX, toY
-        } = result.dataBounds;
+        const range = this.context.chart.range;
+        const resultBounds = result.dataBounds;
+        const sourceBounds = source.dataBounds;
 
-        let maxRealY = -Infinity;
-        let minRealY = Infinity;
-        let maxRealX = -Infinity;
-        let minRealX = Infinity;
+        const minX = source.data[result.data[0].index].x;
+        const maxX = source.data[result.data[result.data.length - 1].index].x;
 
-        // compute bound of passed data, because previous transformer can change data size
-        // and apply offsets
-        for (let element of result.data) {
-            if (element.index == void 0) {
-                continue;
-            }
+        const minY = result.trimmedSourceBounds ? result.trimmedSourceBounds.fromY : sourceBounds.fromY;
+        const maxY = result.trimmedSourceBounds ? result.trimmedSourceBounds.toY : sourceBounds.fromY;
 
-            const real = source.data[element.index];
+        this.maxYTics = Math.min(Math.round(this.context.chart.limits.height / 50), 10);
+        this.maxXTics = Math.min(Math.round(this.context.chart.limits.width / 50), 10);
 
-            maxRealY = Math.max(maxRealY, real.y);
-            maxRealX = Math.max(maxRealX, real.x);
-
-            minRealY = Math.min(minRealY, real.y);
-            minRealX = Math.min(minRealX, real.x);
-        }
-
-        const xTicks = generate(minRealX, maxRealX, this.maxXTics);
-        const yTicks = generate(minRealY, maxRealY, this.maxYTics);
+        const xTicks = generate(minX, maxX, this.maxXTics);
+        const yTicks = generate(minY, maxY, this.maxYTics);
 
         const xLen = xTicks.length;
         const yLen = yTicks.length;
@@ -59,15 +56,15 @@ export class FancyLabelsPlugin implements IDataPlugin {
             const labelX = i < xLen ? x.toFixed(0) : null;
             const labelY = i < yLen ? y.toFixed(0) : null;
 
-            x = (x - minRealX) / (maxRealX - minRealX);
-            y = (y - minRealY) / (maxRealY - minRealY);
+            x = (x - minX) / (maxX - minX);
+            y = (y - minY) / (maxY - minY);
 
-            x = x * (toX - fromX) + fromX;
-            y = y * (toY - fromY) + fromY;
+            x = x * (resultBounds.toX - resultBounds.fromX) + resultBounds.fromX;
+            y = y * (range.toY - range.fromY) + range.fromY;
 
             data.push({
-                x,
-                y,
+                x: Math.round(x),
+                y: Math.round(y),
                 labelX,
                 labelY
             });

@@ -51,7 +51,7 @@ export class TicksElement extends Container {
         ctx.clearRect(0,0,width, height);
         ctx.lineWidth = 1;
         ctx.fillStyle = ctx.strokeStyle = 'black';
-        ctx.font = 'Arial 16px';
+        ctx.font = '16px sans';
 
 
         const passed = new Set();
@@ -77,7 +77,7 @@ export class TicksElement extends Container {
                 ctx.moveTo((width - LABEL_TICS), y | 0);
                 ctx.lineTo(width, y | 0);
 
-                ctx.fillText( label, 0, y | 0);
+                ctx.fillText( label, 4, y + 6);
             }
 
         }

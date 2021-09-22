@@ -1,7 +1,24 @@
 import type {IDataFetchResult, IObjectData} from "../Chart";
 import type { PluggableProvider } from "../providers";
 import type { IDataPlugin } from "./IDataPlugin";
+import { IRangeObject } from "../Range";
 
+type DataTransformPluginResult = IDataFetchResult<IObjectData> & { trimmedSourceBounds?: IRangeObject };
+
+class DataBounds implements IRangeObject {
+    fromX = 0;
+    toX = 0;
+    fromY = 0;
+    toY = 0;
+
+    grown ({x, y} : {x: number, y: number}): void {
+        if (x < this.fromX) this.fromX = x;
+        if (x > this.toX) this.toX = x;
+
+        if (y < this.fromY) this.fromY = y;
+        if (y > this.toY) this.toY = y;
+    }
+}
 /**
  * Data transform plugin, used for converting a input data space to Chart range values,
  */
@@ -26,7 +43,7 @@ export class DataTransformPlugin implements IDataPlugin {
 	 * @implements IDataPlugin
 	 * @inheritDoc
 	 */
-	processElements(result: IDataFetchResult<IObjectData>, source: IDataFetchResult<IObjectData>): IDataFetchResult<IObjectData> {
+	processElements(result: DataTransformPluginResult, source: IDataFetchResult<IObjectData>): DataTransformPluginResult {
 		const {
 			fromX, fromY, width, height
 		} = this.context.chart.range;
@@ -58,13 +75,12 @@ export class DataTransformPlugin implements IDataPlugin {
             }
         };
 
-        const state = {
-            fromX: Infinity, toX: -Infinity,
-            fromY: Infinity, toY: -Infinity
-        };
+        const outBounds = new DataBounds();
+        const trimmedBounds = new DataBounds();
 
         for (let i = 0; i < data.length; i ++) {
-		    const current = transform(data[i]);
+            const input = data[i];
+		    const current = transform(input);
 
             if (this.reduceXRange) {
                 if (current.x < limitRight && (i + 1) < data.length) {
@@ -84,11 +100,8 @@ export class DataTransformPlugin implements IDataPlugin {
                 }
             }
 
-            state.fromY = Math.min(current.y, state.fromY);
-            state.toY = Math.max(current.y, state.toY);
-
-            state.fromX = Math.min(current.x, state.fromX);
-            state.toX = Math.max(current.x, state.toX);
+            outBounds.grown(current);
+            trimmedBounds.grown(input);
 
             output.push(
                 current
@@ -98,19 +111,18 @@ export class DataTransformPlugin implements IDataPlugin {
         if (fitYRange) {
             // rescale Y auto ranged
             for (const out of output) {
-                out.y = (fromY + (out.y - state.fromY) * height / (state.toY - state.fromY));
+                out.y = (fromY + (out.y - outBounds.fromY) * height / (outBounds.toY - outBounds.fromY));
             }
+
+            outBounds.toY = fromY + (outBounds.toY - outBounds.fromY);
+            outBounds.fromY = fromY;
         }
 
-		if (fitYRange) {
-		    const h = state.toY - state.fromY;
 
-            state.fromY = fromY;
-            state.toY = fromY + h;
-        }
+        result.data = output;
 
-		result.data = output;
-		result.dataBounds = state;
+        result.dataBounds = outBounds;
+		result.trimmedSourceBounds = trimmedBounds;
 
 		return result;
 	}
