@@ -5,6 +5,7 @@ import { LABEL_LOCATION } from "../../core/Chart";
 import { Texture } from "@pixi/core";
 import { Container } from "@pixi/display";
 import { MIPMAP_MODES } from "@pixi/constants";
+import {FancyLabelsPlugin} from "../../core/plugins/FancyLabelsPlugin";
 
 const LABEL_TICKS_THICKNESS = 1;
 const LABEL_TICS = 5;
@@ -57,11 +58,9 @@ export class TicksElement extends Container {
 
         // regen
         for (let { x, y, labelX, labelY } of data as any) {
-            const label = this.horizontal
-                ? (labelX ?? x).toFixed(0)
-                : (labelY ?? y).toFixed(0);
+            const label = this.horizontal ? labelX : labelY;
 
-            if (passed.has(label)) {
+            if (!label || passed.has(label)) {
                 continue;
             }
 
@@ -73,6 +72,7 @@ export class TicksElement extends Container {
 
                 ctx.fillText( label, (x | 0) - 15, LABEL_TICS * 4, 30);
             } else {
+                y = height - y;
 
                 ctx.moveTo((width - LABEL_TICS), y | 0);
                 ctx.lineTo(width, y | 0);
@@ -105,6 +105,7 @@ export class LabelsDrawer extends BaseDrawer {
 
     private _xTicks: TicksElement;
     private _yTicks: TicksElement;
+    private _fancyPlugin = new FancyLabelsPlugin();
 
     public init(context: Chart): boolean {
         const {
@@ -201,7 +202,7 @@ export class LabelsDrawer extends BaseDrawer {
             .lineStyle({width: LABEL_TICKS_THICKNESS, color: 0})
         */
 
-
+        this.context.dataProvider.use(this._fancyPlugin);
         const data = this.context.dataProvider.fetch();
 
         this._updateXAxis(data);

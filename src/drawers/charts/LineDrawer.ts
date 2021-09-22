@@ -29,7 +29,7 @@ export class LineDrawer extends BaseDrawer {
     public update(force = false): boolean {
         const node = this.node;
         const {
-            fromX, toX
+            height
         } = this.context.range;
 
         const {
@@ -52,9 +52,6 @@ export class LineDrawer extends BaseDrawer {
             dataBounds
         } = this.lastDrawedFetch;
 
-        const dataWidth = dataBounds.toX - dataBounds.fromX;
-        const dataHeight = dataBounds.toY - dataBounds.fromY;
-
         node.lineStyle(style.thickness || 2, void 0, style.lineJoint as LINE_JOIN);
 
         node.tint = rgb2hex(style.stroke as number[]);
@@ -63,8 +60,8 @@ export class LineDrawer extends BaseDrawer {
         hex2rgb(0xffffff, node.shader.uniforms.uGeomColor);
 
         for (let i = 0; i < data.length; i ++) {
-            const x = +data[i].x;
-            const y = +data[i].y;
+            const x = data[i].x;
+            const y = height - data[i].y;
 
             if (i === 0) {
                 node.moveTo(x, y);
