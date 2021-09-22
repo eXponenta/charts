@@ -77,7 +77,8 @@ const DEFAULT_STYLE: IChartStyle = {
     thickness: 2,
     lineJoint: LINE_JOIN.BEVEL,
     labels: DEFAUTL_LABELS_STYLE,
-    clamp: true
+    clamp: true,
+    fitYRange: false,
 };
 
 export interface IChartStyle {
@@ -93,7 +94,8 @@ export interface IChartStyle {
             position: LABEL_LOCATION;
         } | null
     },
-    clamp: boolean
+    clamp: boolean,
+    fitYRange: boolean
 }
 
 export interface IChartDataOptions {

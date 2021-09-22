@@ -12,13 +12,16 @@ export class DataTransformPlugin implements IDataPlugin {
 
 	public readonly reduceXRange = true;
 
+	private _lastProcessedState = {
+	    fromX: 0, toX: 0, fromY: 0, toY: 0
+    };
+
 	/**
 	 * @implements IDataPlugin
 	 * @inheritDoc
 	 */
 	init(context: PluggableProvider): boolean {
 		this.context = context;
-
 		return true;
 	}
 
@@ -30,6 +33,10 @@ export class DataTransformPlugin implements IDataPlugin {
 		const {
 			fromX, fromY, width, height
 		} = this.context.chart.range;
+
+		const {
+		    fitYRange
+        } = this.context.chart.options.style;
 
 		let {
 		    fromX: limitLeft,
@@ -48,11 +55,16 @@ export class DataTransformPlugin implements IDataPlugin {
 		    return {
 		        ...other,
                 x: fromX + (x - b.fromX) * sx,
-                y: height - (fromY + (y - b.fromY) * sy), // flip
+                y: fromY + (y - b.fromY) * sy,
             }
         };
 
-		for (let i = 0; i < data.length; i ++) {
+        const state = {
+            fromX: Infinity, toX: -Infinity,
+            fromY: Infinity, toY: -Infinity
+        };
+
+        for (let i = 0; i < data.length; i ++) {
 		    const current = transform(data[i]);
 
             if (this.reduceXRange) {
@@ -73,9 +85,31 @@ export class DataTransformPlugin implements IDataPlugin {
                 }
             }
 
+            state.fromY = Math.min(current.y, state.fromY);
+            state.toY = Math.max(current.y, state.toY);
+
+            state.fromX = Math.min(current.x, state.fromX);
+            state.toX = Math.max(current.x, state.toX);
+
             output.push(
                 current
             );
+        }
+
+		// rescale Y auto ranged
+		for (const out of output) {
+		    if (fitYRange) {
+                out.y = (fromY + (out.y - state.fromY) * height / (state.toY - state.fromY));
+            }
+
+		    out.y = height - out.y;
+        }
+
+		if (fitYRange) {
+		    const h = state.toY - state.fromY;
+
+            state.fromY = fromY;
+            state.toY = fromY + h;
         }
 
 		return output;
@@ -92,10 +126,10 @@ export class DataTransformPlugin implements IDataPlugin {
 
 		const b = result.dataBounds;
 
-		b.fromX += fromX;
-		b.fromY += fromY;
-		b.toX = fromX + width;
-		b.toY = fromY + height;
+		b.fromX = this._lastProcessedState.fromX
+		b.fromY = this._lastProcessedState.fromY;
+		b.toX = this._lastProcessedState.toX;
+		b.toY = this._lastProcessedState.toY;
 
 		return result;
 	}
