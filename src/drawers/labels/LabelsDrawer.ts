@@ -1,10 +1,10 @@
-import {Sprite} from "@pixi/sprite";
-import {BaseDrawer} from "../BaseDrawer";
-import type {Chart, IDataFetchResult, IObjectData} from "../../core/Chart";
-import {LABEL_LOCATION} from "../../core/Chart";
-import {Texture} from "@pixi/core";
-import {Container} from "@pixi/display";
-import {MIPMAP_MODES} from "@pixi/constants";
+import { Sprite } from "@pixi/sprite";
+import { BaseDrawer } from "../BaseDrawer";
+import type { Chart, IDataFetchResult, IObjectData } from "../../core/Chart";
+import { LABEL_LOCATION } from "../../core/Chart";
+import { Texture } from "@pixi/core";
+import { Container } from "@pixi/display";
+import { MIPMAP_MODES } from "@pixi/constants";
 
 const LABEL_TICKS_THICKNESS = 1;
 const LABEL_TICS = 5;

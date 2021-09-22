@@ -3,7 +3,8 @@ import { InteractionManager } from "@pixi/interaction";
 import { Container } from "@pixi/display";
 
 import { Chart, CHART_EVENTS } from "./core";
-import {Ticker, UPDATE_PRIORITY} from "@pixi/ticker";
+import { Ticker, UPDATE_PRIORITY } from "@pixi/ticker";
+import { PixiInput } from "./core/input";
 
 Renderer.registerPlugin('batch', BatchRenderer);
 Renderer.registerPlugin('interaction', InteractionManager);
@@ -18,6 +19,8 @@ export class ChartApp {
     } = {
         width: 0, height: 0
     };
+
+    readonly input: PixiInput;
 
     constructor(canvasOrId: HTMLCanvasElement | string) {
         const view = canvasOrId instanceof HTMLCanvasElement
@@ -41,8 +44,13 @@ export class ChartApp {
         this.onChartUpdate = this.onChartUpdate.bind(this);
         this.removeChart = this.removeChart.bind(this);
 
+        this.input = new PixiInput(this.renderer.plugins.interaction);
+
         //@ts-ignore
-        new self.ResizeObserver(this.onDimensionUpdate).observe(view);
+        if (self.ResizeObserver) {
+            //@ts-ignore
+            new self.ResizeObserver(this.onDimensionUpdate).observe(view);
+        }
 
         this.ticker.add(this.update);
         this.ticker.add(this.draw, UPDATE_PRIORITY.LOW);
@@ -96,6 +104,8 @@ export class ChartApp {
     }
 
     private _unbindEvents (chart: Chart): void {
+        this.input.unregister(chart);
+
         chart.off(CHART_EVENTS.UPDATE, this.onChartUpdate);
         chart.off(CHART_EVENTS.DESTROY, this.removeChart);
     }
@@ -103,9 +113,13 @@ export class ChartApp {
     private _bindEvents (chart: Chart): void {
         chart.on(CHART_EVENTS.UPDATE, this.onChartUpdate);
         chart.on(CHART_EVENTS.DESTROY, this.removeChart);
+
+        this.input.register(chart);
     }
 
     protected update() {
+        this.input.update(this.ticker.elapsedMS);
+
         for (const chart of this.stage.children) {
             (<Chart> chart).update();
         }

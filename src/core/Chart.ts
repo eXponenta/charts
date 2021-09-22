@@ -1,4 +1,4 @@
-import {Matrix, Point, Rectangle} from "@pixi/math";
+import { Matrix, Point, Rectangle } from "@pixi/math";
 import { LINE_JOIN } from "@pixi/graphics";
 import { Container, IDestroyOptions } from "@pixi/display";
 import { InteractionEvent} from "@pixi/interaction";
@@ -20,6 +20,7 @@ import { IDrawerPlugin } from "../drawers/IDrawerPlugin";
 import { AreaDrawer, LineDrawer} from "../drawers/charts";
 import { GridDrawer } from "../drawers/grid/GridDrawer";
 import { LabelsDrawer } from "../drawers/labels/LabelsDrawer";
+import { BaseInput } from "./Input";
 
 export type ILabelData = Array<string | Date | number>;
 export type IArrayData = ArrayLike<number>;
@@ -132,10 +133,16 @@ function validate(options: IChartDataOptions): IChartDataOptions {
     return result;
 }
 
+/**
+ * Root chart class that used for drawing a any kind of charts
+ */
 export class Chart extends Container {
-    public name: string = '';
-
     protected static plugins: typeof BaseDrawer[] = [];
+
+    /**
+     * Plugin register API for attaching DrawerPlugins globally. This plugins will be used for each instance of Chart
+     * @param plugin
+     */
     public static registerPlugin (plugin: typeof BaseDrawer): boolean {
         if (typeof plugin !== 'function' || !('init' in plugin.prototype)) {
             console.warn('[Chart plugin register] Plugin should have a valid constructor and has init method');
@@ -145,6 +152,16 @@ export class Chart extends Container {
         this.plugins.push(plugin);
         return true;
     }
+
+    /**
+     * Chart name
+     */
+    public name: string = '';
+
+    /**
+     * Input service that attached on current chart
+     */
+    public input: BaseInput | null;
 
     public readonly range: Range = new Range();
     public readonly limits: Range = new Range();
@@ -171,6 +188,12 @@ export class Chart extends Container {
         return this._drawId;
     }
 
+    /**
+     * Instance a Chart with provided data, chart data should be immutable
+     * Handle the drawers that will be used for current Chart instances.
+     * @param { IChartDataOptions } options
+     * @param { IDrawerPlugin[] } plugins Drawers object that can be used in current chart
+     */
     constructor (
         public readonly options: IChartDataOptions,
         plugins: IDrawerPlugin[] = [],
