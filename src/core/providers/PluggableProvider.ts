@@ -110,36 +110,27 @@ export class PluggableProvider implements IDataProvider, IDataPlugin {
             }
         }
 
-        this._activePlugins.push(...this._sessionPlugins);
+        for(const p of this._sessionPlugins) {
+            if (!p.init || p.init(this)) {
+                this._activePlugins.push(p);
+            }
+        }
 
         return  true;
     }
 
-    processElements (data: any[], source: IDataFetchResult<any>): any
+    processElements (result: IDataFetchResult<IObjectData>, source: IDataFetchResult<any>): IDataFetchResult<IObjectData>
     {
         for (const p of this._activePlugins) {
             if (!p.processElements) {
                 continue;
             }
 
-            data = p.processElements(data, source);
+            result = p.processElements(result, source);
 
-            if (data == void 0) {
+            if (!result || !result.data) {
                 throw new Error('Illegal output (null not allowed) by:' + p.name);
             }
-        }
-
-        return data;
-    }
-
-    processResult (result: IDataFetchResult<any>, source: IDataFetchResult<any>): IDataFetchResult<any>
-    {
-        for (const p of this._activePlugins) {
-            if (!p.processResult) {
-                continue;
-            }
-
-            result = p.processResult(result, source);
         }
 
         return result;
@@ -152,10 +143,7 @@ export class PluggableProvider implements IDataProvider, IDataPlugin {
         let result = {... source };
         result.dataBounds = { ... result.dataBounds };
 
-        const sourceData = result.data;
-
-        result.data =  this.processElements(sourceData, source);
-        result = this.processResult(result, source);
+        result =  this.processElements(result, source);
 
         // disable plugins
         this._sessionPlugins.length = 0;

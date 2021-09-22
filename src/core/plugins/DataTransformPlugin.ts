@@ -1,4 +1,4 @@
-import type { IDataFetchResult } from "../Chart";
+import type {IDataFetchResult, IObjectData} from "../Chart";
 import type { PluggableProvider } from "../providers";
 import type { IDataPlugin } from "./IDataPlugin";
 
@@ -12,9 +12,6 @@ export class DataTransformPlugin implements IDataPlugin {
 
 	public readonly reduceXRange = true;
 
-	private _lastProcessedState = {
-	    fromX: 0, toX: 0, fromY: 0, toY: 0
-    };
 
 	/**
 	 * @implements IDataPlugin
@@ -29,7 +26,7 @@ export class DataTransformPlugin implements IDataPlugin {
 	 * @implements IDataPlugin
 	 * @inheritDoc
 	 */
-	processElements(data: any[], source: IDataFetchResult<any>): any {
+	processElements(result: IDataFetchResult<IObjectData>, source: IDataFetchResult<IObjectData>): IDataFetchResult<IObjectData> {
 		const {
 			fromX, fromY, width, height
 		} = this.context.chart.range;
@@ -38,12 +35,14 @@ export class DataTransformPlugin implements IDataPlugin {
 		    fitYRange
         } = this.context.chart.options.style;
 
+		const data = result.data;
+
 		let {
 		    fromX: limitLeft,
             toX: limitRight
         } = this.context.chart.limits;
 
-		const b = source.dataBounds;
+		const b = result.dataBounds;
 		const dw = b.toX - b.fromX || 1;
 		const dh = b.toY - b.fromY || 1;
 
@@ -96,13 +95,11 @@ export class DataTransformPlugin implements IDataPlugin {
             );
         }
 
-		// rescale Y auto ranged
-		for (const out of output) {
-		    if (fitYRange) {
+        if (fitYRange) {
+            // rescale Y auto ranged
+            for (const out of output) {
                 out.y = (fromY + (out.y - state.fromY) * height / (state.toY - state.fromY));
             }
-
-		    out.y = height - out.y;
         }
 
 		if (fitYRange) {
@@ -112,24 +109,8 @@ export class DataTransformPlugin implements IDataPlugin {
             state.toY = fromY + h;
         }
 
-		return output;
-	}
-
-	/**
-	 * @implements IDataPlugin
-	 * @inheritDoc
-	 */
-	processResult(result: IDataFetchResult<any>, _source: IDataFetchResult<any>): IDataFetchResult<any> {
-		const {
-			fromX, fromY, width, height
-		} = this.context.chart.range;
-
-		const b = result.dataBounds;
-
-		b.fromX = this._lastProcessedState.fromX
-		b.fromY = this._lastProcessedState.fromY;
-		b.toX = this._lastProcessedState.toX;
-		b.toY = this._lastProcessedState.toY;
+		result.data = output;
+		result.dataBounds = state;
 
 		return result;
 	}

@@ -1,5 +1,5 @@
 import type { PluggableProvider } from "../providers";
-import { IDataFetchResult } from "../Chart";
+import {IDataFetchResult, IObjectData} from "../Chart";
 
 /**
  * Data plugin interface, used for transforming a passed data
@@ -20,21 +20,14 @@ export interface IDataPlugin {
 
 	/**
 	 * Called after init for preprocessing elements
-	 * @param {*} data current processed record
-	 * @param {IDataFetchResult<*>} source processed source returned from fetch of data provider
+     * @param {IDataFetchResult<*>} result data fetch result that passed from previous plugin
+	 * @param {IDataFetchResult<*>} source original source returned from fetch of data provider
 	 * @return Should return processed entry, NOT NULL!
 	 */
-	processElements?(data: any[], source: IDataFetchResult<any>): any[];
-
-	/**
-	 * Called on end of data processing, can mutate result fetch result structure or entry data (UNSAFE)
-	 * @param result
-	 * @param source
-	 */
-	processResult?(result: IDataFetchResult<any>, source: IDataFetchResult<any>): IDataFetchResult<any>;
+	processElements?(result: IDataFetchResult<IObjectData>, source: IDataFetchResult<IObjectData>): IDataFetchResult<IObjectData>;
 }
 
 /**
  * Function-based data transform
  */
-export type IFunctionDataPlugin = (data: any[], source: IDataFetchResult<any>) => any[];
+export type IFunctionDataPlugin = (result: IDataFetchResult<IObjectData>, source: IDataFetchResult<any>) =>  IDataFetchResult<IObjectData>;

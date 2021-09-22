@@ -22,8 +22,8 @@ export class ArrayChainDataProvider implements IDataProvider {
     fetch(from: number = 0, to?: number): IDataFetchResult<IObjectData>{
         const chain = this.data as IArrayChainData;
 
-        to = to || (chain.length - 1);
-        to = Math.min(chain.length - 1, Math.max(from, to));
+        to = to || (chain.length);
+        to = Math.min(chain.length, Math.max(from, to));
 
         const data = [];
 
