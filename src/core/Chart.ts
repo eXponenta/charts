@@ -211,7 +211,7 @@ export class Chart extends Container {
 
         this.preparePlugins(plugins);
 
-        this.on('mousemove', this.onDrag);
+        this.on('pointermove', this.onDrag);
         document.addEventListener('wheel', this.onWheel.bind(this));
 
         // first init
@@ -349,25 +349,47 @@ export class Chart extends Container {
     }
 
     private onWheel(event: WheelEvent): void {
-        const scaleX = event.deltaY > 0 ? 1.1 : 0.9;
-        const scaleY = 1;
-
         if (!this._lastMousePoint) {
             return;
         }
 
-        this.scaleAtPoint(this._lastMousePoint, scaleX, scaleY);
+        const pos = this._lastMousePoint;
+
+        if (
+            this.limits.fromX > pos.x ||
+            this.limits.toX < pos.x ||
+            this.limits.fromY > pos.y ||
+            this.limits.toY < pos.y
+        ) {
+            return;
+        }
+
+        const scaleX = event.deltaY > 0 ? 1.1 : 0.9;
+        const scaleY = 1;
+
+        this.scaleAtPoint(pos, scaleX, scaleY);
     }
 
     private onDrag(event: InteractionEvent): void {
+        const pos = event.data.global;
+        this._lastMousePoint = pos.clone();
+
+        if (
+            this.limits.fromX > pos.x ||
+            this.limits.toX < pos.x ||
+            this.limits.fromY > pos.y ||
+            this.limits.toY < pos.y
+        ) {
+            return;
+        }
+
         const original = event.data.originalEvent as MouseEvent;
-        this._lastMousePoint = event.data.global.clone();
 
         if (original.buttons & 0x1) {
 
             if (this._lastPressedMousePoint) {
-                const tx = event.data.global.x - this._lastPressedMousePoint.x;
-                const ty = -(event.data.global.y - this._lastPressedMousePoint.y);
+                const tx = pos.x - this._lastPressedMousePoint.x;
+                const ty = -(pos.y - this._lastPressedMousePoint.y);
 
                 this.transformRange({
                     tx, ty
