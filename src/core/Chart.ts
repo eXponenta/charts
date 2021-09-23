@@ -131,7 +131,7 @@ function validate(options: IChartDataOptions): IChartDataOptions {
 
     result.style.labels = {
         x: {...DEFAUTL_LABELS_STYLE.x }, y: {...DEFAUTL_LABELS_STYLE.y },
-        ...(options.style.labels || {})
+        ...((options.style || {}).labels || {})
     };
 
     return result;
