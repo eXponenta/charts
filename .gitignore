@@ -22,7 +22,6 @@ npm-debug.log
 !.gitkeep
 *__temp
 node_modules
-docs/
 
 # jetBrains IDE ignores
 .idea
