@@ -6,10 +6,10 @@ import { IRangeObject } from "../Range";
 type DataTransformPluginResult = IDataFetchResult<IObjectData> & { trimmedSourceBounds?: IRangeObject };
 
 class DataBounds implements IRangeObject {
-    fromX = 0;
-    toX = 0;
-    fromY = 0;
-    toY = 0;
+    fromX = Infinity;
+    toX = -Infinity;
+    fromY = Infinity;
+    toY = -Infinity;
 
     grown ({x, y} : {x: number, y: number}): void {
         if (x < this.fromX) this.fromX = x;

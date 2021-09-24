@@ -29,19 +29,33 @@ export class FancyLabelsPlugin implements IDataPlugin {
     }
 
     processElements(result: IDataFetchResult<IObjectData> & {trimmedSourceBounds?: IRangeObject}, source: IDataFetchResult<IObjectData>): IDataFetchResult<IObjectData> {
+        /**
+         * @todo
+         * Do this more clear, atm we depend of data transformer trimmed output and fit options and this will invalid if there are another data processor
+         * try to use a source data and results for computing valid ticks
+         */
         const data: IObjectData = [];
-        const range = this.context.chart.range;
+        const fitY = this.context.chart.options.style.fitYRange;
+        const limits = this.context.chart.limits;
         const resultBounds = result.dataBounds;
         const sourceBounds = source.dataBounds;
 
-        const minX = source.data[result.data[0].index].x;
-        const maxX = source.data[result.data[result.data.length - 1].index].x;
+        // fitY? What will be when fitted result is shifted?
+        const scaleX = fitY ? limits.width : resultBounds.toX - resultBounds.fromX;
+        let scaleY = fitY ? limits.height : resultBounds.toY - resultBounds.fromY;
 
-        const minY = result.trimmedSourceBounds ? result.trimmedSourceBounds.fromY : sourceBounds.fromY;
-        const maxY = result.trimmedSourceBounds ? result.trimmedSourceBounds.toY : sourceBounds.fromY;
+        let minX = result.trimmedSourceBounds.fromX;
+        let maxX = result.trimmedSourceBounds.toX;
+        let minY = result.trimmedSourceBounds.fromY;
+        let maxY = result.trimmedSourceBounds.toY;
 
-        this.maxYTics = Math.min(Math.round(this.context.chart.limits.height / 50), 10);
-        this.maxXTics = Math.min(Math.round(this.context.chart.limits.width / 50), 10);
+        this.maxYTics = Math.min(Math.round(limits.height / 50), 10);
+        this.maxXTics = Math.min(Math.round(limits.width / 50), 10);
+
+        const yScaleFactor = (maxY - minY) / scaleY;
+
+        minY -= yScaleFactor * resultBounds.fromY;
+        maxY += yScaleFactor * (limits.height - resultBounds.toY);
 
         const xTicks = generate(minX, maxX, this.maxXTics);
         const yTicks = generate(minY, maxY, this.maxYTics);
@@ -59,8 +73,8 @@ export class FancyLabelsPlugin implements IDataPlugin {
             x = (x - minX) / (maxX - minX);
             y = (y - minY) / (maxY - minY);
 
-            x = x * (resultBounds.toX - resultBounds.fromX) + resultBounds.fromX;
-            y = y * (range.toY - range.fromY) + range.fromY;
+            x = x * scaleX + resultBounds.fromX;
+            y = y * limits.height;// resultBounds.fromY;
 
             data.push({
                 x: Math.round(x),
