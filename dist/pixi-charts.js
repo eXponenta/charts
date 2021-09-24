@@ -1,8 +1,8 @@
 /* eslint-disable */
  
 /*!
- * @pixi/charts - v0.2.0
- * Compiled Wed, 22 Sep 2021 19:32:07 UTC
+ * @pixi/charts - v0.2.1
+ * Compiled Fri, 24 Sep 2021 10:56:27 UTC
  *
  * @pixi/charts is licensed under the MIT License.
  * http://www.opensource.org/licenses/mit-license
@@ -4356,10 +4356,10 @@ class PluggableProvider  {
 } PluggableProvider.__initStatic();
 
 class DataBounds  {constructor() { DataBounds.prototype.__init.call(this);DataBounds.prototype.__init2.call(this);DataBounds.prototype.__init3.call(this);DataBounds.prototype.__init4.call(this); }
-    __init() {this.fromX = 0;}
-    __init2() {this.toX = 0;}
-    __init3() {this.fromY = 0;}
-    __init4() {this.toY = 0;}
+    __init() {this.fromX = Infinity;}
+    __init2() {this.toX = -Infinity;}
+    __init3() {this.fromY = Infinity;}
+    __init4() {this.toY = -Infinity;}
 
     grown ({x, y} ) {
         if (x < this.fromX) this.fromX = x;
@@ -6361,19 +6361,33 @@ class FancyLabelsPlugin  {constructor() { FancyLabelsPlugin.prototype.__init.cal
     }
 
     processElements(result, source) {
+        /**
+         * @todo
+         * Do this more clear, atm we depend of data transformer trimmed output and fit options and this will invalid if there are another data processor
+         * try to use a source data and results for computing valid ticks
+         */
         const data = [];
-        const range = this.context.chart.range;
+        const fitY = this.context.chart.options.style.fitYRange;
+        const limits = this.context.chart.limits;
         const resultBounds = result.dataBounds;
-        const sourceBounds = source.dataBounds;
+        source.dataBounds;
 
-        const minX = source.data[result.data[0].index].x;
-        const maxX = source.data[result.data[result.data.length - 1].index].x;
+        // fitY? What will be when fitted result is shifted?
+        const scaleX = fitY ? limits.width : resultBounds.toX - resultBounds.fromX;
+        let scaleY = fitY ? limits.height : resultBounds.toY - resultBounds.fromY;
 
-        const minY = result.trimmedSourceBounds ? result.trimmedSourceBounds.fromY : sourceBounds.fromY;
-        const maxY = result.trimmedSourceBounds ? result.trimmedSourceBounds.toY : sourceBounds.fromY;
+        let minX = result.trimmedSourceBounds.fromX;
+        let maxX = result.trimmedSourceBounds.toX;
+        let minY = result.trimmedSourceBounds.fromY;
+        let maxY = result.trimmedSourceBounds.toY;
 
-        this.maxYTics = Math.min(Math.round(this.context.chart.limits.height / 50), 10);
-        this.maxXTics = Math.min(Math.round(this.context.chart.limits.width / 50), 10);
+        this.maxYTics = Math.min(Math.round(limits.height / 50), 10);
+        this.maxXTics = Math.min(Math.round(limits.width / 50), 10);
+
+        const yScaleFactor = (maxY - minY) / scaleY;
+
+        minY -= yScaleFactor * resultBounds.fromY;
+        maxY += yScaleFactor * (limits.height - resultBounds.toY);
 
         const xTicks = niceTicks(minX, maxX, this.maxXTics);
         const yTicks = niceTicks(minY, maxY, this.maxYTics);
@@ -6391,8 +6405,8 @@ class FancyLabelsPlugin  {constructor() { FancyLabelsPlugin.prototype.__init.cal
             x = (x - minX) / (maxX - minX);
             y = (y - minY) / (maxY - minY);
 
-            x = x * (resultBounds.toX - resultBounds.fromX) + resultBounds.fromX;
-            y = y * (range.toY - range.fromY) + range.fromY;
+            x = x * scaleX + resultBounds.fromX;
+            y = y * limits.height;// resultBounds.fromY;
 
             data.push({
                 x: Math.round(x),
@@ -6734,7 +6748,7 @@ function validate(options) {
 
     result.style.labels = {
         x: {...DEFAUTL_LABELS_STYLE.x }, y: {...DEFAUTL_LABELS_STYLE.y },
-        ...(options.style.labels || {})
+        ...((options.style || {}).labels || {})
     };
 
     return result;
@@ -6813,7 +6827,7 @@ class Chart extends display.Container {
 
         this.preparePlugins(plugins);
 
-        this.on('mousemove', this.onDrag);
+        this.on('pointermove', this.onDrag);
         document.addEventListener('wheel', this.onWheel.bind(this));
 
         // first init
@@ -6951,25 +6965,47 @@ class Chart extends display.Container {
     }
 
      onWheel(event) {
-        const scaleX = event.deltaY > 0 ? 1.1 : 0.9;
-        const scaleY = 1;
-
         if (!this._lastMousePoint) {
             return;
         }
 
-        this.scaleAtPoint(this._lastMousePoint, scaleX, scaleY);
+        const pos = this._lastMousePoint;
+
+        if (
+            this.limits.fromX > pos.x ||
+            this.limits.toX < pos.x ||
+            this.limits.fromY > pos.y ||
+            this.limits.toY < pos.y
+        ) {
+            return;
+        }
+
+        const scaleX = event.deltaY > 0 ? 1.1 : 0.9;
+        const scaleY = 1;
+
+        this.scaleAtPoint(pos, scaleX, scaleY);
     }
 
      onDrag(event) {
+        const pos = event.data.global;
+        this._lastMousePoint = pos.clone();
+
+        if (
+            this.limits.fromX > pos.x ||
+            this.limits.toX < pos.x ||
+            this.limits.fromY > pos.y ||
+            this.limits.toY < pos.y
+        ) {
+            return;
+        }
+
         const original = event.data.originalEvent ;
-        this._lastMousePoint = event.data.global.clone();
 
         if (original.buttons & 0x1) {
 
             if (this._lastPressedMousePoint) {
-                const tx = event.data.global.x - this._lastPressedMousePoint.x;
-                const ty = -(event.data.global.y - this._lastPressedMousePoint.y);
+                const tx = pos.x - this._lastPressedMousePoint.x;
+                const ty = -(pos.y - this._lastPressedMousePoint.y);
 
                 this.transformRange({
                     tx, ty
