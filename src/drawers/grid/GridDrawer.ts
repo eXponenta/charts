@@ -1,13 +1,18 @@
 import { Graphics } from "@pixi/graphics";
 import { BaseDrawer } from "../BaseDrawer";
 import { FancyLabelsPlugin } from "../../core/plugins/FancyLabelsPlugin";
-import type {Series} from "../../core";
+import type { Series } from "../../core";
 
 export class GridDrawer extends BaseDrawer {
     public readonly name = 'GridDrawer';
     public node: Graphics = new Graphics();
 
     init(context: Series): boolean {
+        // supress grid drawer when parent has parent, their grid will be used.
+        if (context.parent) {
+            return false;
+        }
+
         this.node.zIndex = -100;
 
         return super.init(context);

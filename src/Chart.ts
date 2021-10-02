@@ -4,7 +4,7 @@ import { Container } from "@pixi/display";
 import { Ticker, UPDATE_PRIORITY } from "@pixi/ticker";
 
 import type { IMultiSeriesDataOptions, ISeriesDataOptions } from "./core/ISeriesDataOptions";
-import { Series, CHART_EVENTS} from "./core";
+import { Series, CHART_EVENTS} from "./core/";
 import { PixiInput } from "./core/input";
 
 Renderer.registerPlugin('batch', BatchRenderer);
@@ -123,6 +123,10 @@ export class Chart {
             }
         }
 
+        if (!parent && nested) {
+            parent = this.tall;
+        }
+
         if (data instanceof Series) {
             this.addSeries(data);
             return;
@@ -181,12 +185,23 @@ export class Chart {
             return  series;
         }
 
+        // resolve parent;
         this.series.add(series);
 
         series.name = series.name || name;
         series.setViewport(0,0, this.size.width, this.size.height);
 
         this._bindEvents(series);
+
+        let parent: Series | string = series.options.parent;
+
+        if (typeof parent === 'string') {
+            parent = this.getByName(parent);
+        }else if (parent instanceof Series && !this.series.has(parent)) {
+            parent = null;
+        }
+
+        series.bind(this, parent as Series);
 
         this.stage.addChild(series.node);
 
@@ -200,6 +215,18 @@ export class Chart {
         }
 
         this._unbindEvents(series);
+        this.series.delete(series);
+
+        series.unbind(this);
+
+        for (let other of this.series) {
+            if (other.parent === series) {
+                console.warn(`Parent series for ${other.name} was removed`);
+                other.unbind(this);
+                other.bind(this, null);
+            }
+        }
+
         this.stage.removeChild(series.node)
 
         return series;

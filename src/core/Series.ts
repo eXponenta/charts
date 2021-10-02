@@ -18,6 +18,7 @@ import {LabelsDrawer} from "../drawers/labels/LabelsDrawer";
 import {BaseInput} from "./Input";
 import {DEFAULT_LABELS_STYLE, DEFAULT_STYLE, IData, IDataProvider, ISeriesDataOptions} from "./ISeriesDataOptions";
 import {EventEmitter} from "@pixi/utils";
+import {Chart} from "../Chart";
 
 function isValidEnum(prop: string, enumType: Record<string, any>): boolean {
     if (!prop) {
@@ -71,6 +72,15 @@ export class Series extends EventEmitter {
         return true;
     }
 
+    public readonly node: Container = new Container();
+
+    private readonly _plugins: IDrawerPlugin[] = [];
+    private readonly _activePlugins: IDrawerPlugin[] = [];
+
+    public  range: Range = new Range();
+    public  limits: Range = new Range();
+
+
     /**
      * Chart name
      */
@@ -80,20 +90,17 @@ export class Series extends EventEmitter {
      * Input service that attached on current chart
      */
     public input: BaseInput | null;
-    public readonly node: Container = new Container();
-    public readonly range: Range = new Range();
-    public readonly limits: Range = new Range();
-    public parent: Series;
+    /**
+     * Current Chart context for bounded Series
+     */
+    public context: Chart | null;
 
+    public parent: Series | null;
 
     public dataProvider: PluggableProvider;
 
     private _lastPressedMousePoint: Point;
     private _lastMousePoint: Point;
-
-    private readonly _plugins: IDrawerPlugin[] = [];
-    private readonly _activePlugins: IDrawerPlugin[] = [];
-
     private _updateId: number = -1;
     private _drawId: number = -1;
 
@@ -104,6 +111,7 @@ export class Series extends EventEmitter {
     public get drawId(): number {
         return this._drawId;
     }
+
 
     /**
      * Instance a Chart with provided data, chart data should be immutable
@@ -119,22 +127,49 @@ export class Series extends EventEmitter {
 
         this.name = options.name;
         this.onRangeChanged = this.onRangeChanged.bind(this);
+        this.onWheel = this.onWheel.bind(this);
 
         this.options = validate(options);
+
+        this.preparePlugins(plugins);
+    }
+
+    public bind (context: Chart, parent: Series = null) {
+        this.parent = parent;
+        this.context = context;
+        this.input = context.input;
+
+        if (parent) {
+            this.range = parent.range;
+        } else {
+            this.range = new Range(this.limits);
+        }
+
         this.range.on(Observable.CHANGE_EVENT, this.onRangeChanged);
 
         this.node.interactive = true;
         this.node.interactiveChildren = false;
 
-        this.preparePlugins(plugins);
-
         // TODO
         // Rebound onto input
         this.node.on('pointermove', this.onDrag, this);
-        document.addEventListener('wheel', this.onWheel.bind(this));
+        document.addEventListener('wheel', this.onWheel);
 
-        // first init
         this.init();
+    }
+
+    public unbind (context: Chart) {
+        this.range.off(Observable.CHANGE_EVENT, this.onRangeChanged);
+        this.node.interactive = false;
+        this.node.interactiveChildren = false;
+
+        // TODO
+        // Rebound onto input
+        this.node.off('pointermove', this.onDrag, this);
+        document.removeEventListener('wheel', this.onWheel);
+
+        this.context = null;
+        this.input = null;
     }
 
     protected preparePlugins (externalPlugins: IDrawerPlugin[]) {
@@ -168,6 +203,7 @@ export class Series extends EventEmitter {
         this.parse();
 
         this._activePlugins.length = 0;
+        this.node.removeChildren();
 
         for (const plugin of this._plugins) {
             if (!plugin.init(this)) {
@@ -268,6 +304,10 @@ export class Series extends EventEmitter {
     }
 
     private onWheel(event: WheelEvent): void {
+        if (this.parent) {
+            return;
+        }
+
         if (!this._lastMousePoint) {
             return;
         }
@@ -290,6 +330,10 @@ export class Series extends EventEmitter {
     }
 
     private onDrag(event: InteractionEvent): void {
+        if (this.parent) {
+            return;
+        }
+
         const pos = event.data.global;
         this._lastMousePoint = pos.clone();
 

@@ -112,6 +112,10 @@ export class LabelsDrawer extends BaseDrawer {
             x, y
         } = context.options.style.labels;
 
+        if (context.parent) {
+            return false;
+        }
+
         return (
             super.init(context) ||
             x.position === LABEL_LOCATION.NONE ||
