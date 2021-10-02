@@ -5,7 +5,7 @@ import { PlotGradient } from "../../../pixi-candles/src";
 import { LineDrawer } from "./LineDrawer";
 import { BaseDrawer } from "../BaseDrawer";
 import { CHART_TYPE } from "../../core/CHART_TYPE";
-import type { Chart } from "../../core/Chart";
+import type { Series } from "../../core/Series";
 
 export class AreaDrawer extends BaseDrawer {
     public readonly name = 'AreaDrawer';
@@ -18,7 +18,7 @@ export class AreaDrawer extends BaseDrawer {
         super();
     }
 
-    init (context: Chart): boolean {
+    init (context: Series): boolean {
         super.init(context);
 
         if (context.options.type !== CHART_TYPE.AREA) {

@@ -1,9 +1,9 @@
 import type { IDataPlugin } from "./IDataPlugin";
 import type { PluggableProvider } from "../providers";
-import type { IDataFetchResult, IObjectData } from "../Chart";
 import type { IRangeObject } from '../Range';
 
 import generate from 'nice-ticks';
+import {IDataFetchResult, IObjectData} from "../ISeriesDataOptions";
 
 /**
  * Data plugin for generation a nice tics/labels

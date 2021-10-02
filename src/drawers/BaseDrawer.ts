@@ -1,13 +1,14 @@
-import type { Chart, IChartStyle } from "../core/Chart";
+import type { Series} from "../core/Series";
 import { parseStyle } from "./Utils";
 import type { IDrawerPlugin } from "./IDrawerPlugin";
+import {ISeriesStyle} from "../core/ISeriesDataOptions";
 
 export class BaseDrawer implements IDrawerPlugin {
     name: string = '';
 
-    protected context: Chart = null;
+    protected context: Series = null;
 
-    public init (context: Chart): boolean {
+    public init (context: Series): boolean {
         this.context = context;
 
         return true;
@@ -29,7 +30,7 @@ export class BaseDrawer implements IDrawerPlugin {
 
     }
 
-    protected getParsedStyle(): IChartStyle {
+    protected getParsedStyle(): ISeriesStyle {
         return parseStyle(this.context.options.style);
     }
 

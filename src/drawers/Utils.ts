@@ -1,14 +1,14 @@
-import { IChartStyle } from "../core/Chart";
 //@ts-ignore
 import parseColor from "color-parse";
+import {ISeriesStyle} from "../core/ISeriesDataOptions";
 
 const FIELDS = ['fill', 'stroke'];
 
 /**
  * Convert CSS style color onto array [r, g, b, a]
- * @param {IChartStyle} style
+ * @param {ISeriesStyle} style
  */
-export function parseStyle (style: IChartStyle): IChartStyle {
+export function parseStyle (style: ISeriesStyle): ISeriesStyle {
     const parsed: Record<string, any> = {...style};
 
     for(let key of FIELDS) {
@@ -41,5 +41,5 @@ export function parseStyle (style: IChartStyle): IChartStyle {
         }
     }
 
-    return parsed as IChartStyle;
+    return parsed as ISeriesStyle;
 }

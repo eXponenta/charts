@@ -1,11 +1,11 @@
 import { Sprite } from "@pixi/sprite";
 import { BaseDrawer } from "../BaseDrawer";
-import type { Chart, IDataFetchResult, IObjectData } from "../../core/Chart";
-import { LABEL_LOCATION } from "../../core/Chart";
+import type { Series} from "../../core/Series";
 import { Texture } from "@pixi/core";
 import { Container } from "@pixi/display";
 import { MIPMAP_MODES } from "@pixi/constants";
 import {FancyLabelsPlugin} from "../../core/plugins/FancyLabelsPlugin";
+import {IDataFetchResult, IObjectData, LABEL_LOCATION} from "../../core/ISeriesDataOptions";
 
 const LABEL_TICKS_THICKNESS = 1;
 const LABEL_TICS = 5;
@@ -107,7 +107,7 @@ export class LabelsDrawer extends BaseDrawer {
     private _yTicks: TicksElement;
     private _fancyPlugin = new FancyLabelsPlugin();
 
-    public init(context: Chart): boolean {
+    public init(context: Series): boolean {
         const {
             x, y
         } = context.options.style.labels;

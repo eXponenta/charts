@@ -1,9 +1,9 @@
-import type { Chart } from '../Chart';
+import type { Series } from '../Series';
 import { InteractionEvent, InteractionManager } from "@pixi/interaction";
 import { BaseInput } from "./Input";
 
 export class PixiInput extends BaseInput {
-	private _charts: Set<Chart> = new Set();
+	private _charts: Set<Series> = new Set();
 	private _eventsRegistered: boolean = false;
 
 	constructor(
@@ -77,7 +77,7 @@ export class PixiInput extends BaseInput {
 		this._eventsRegistered = false;
 	}
 
-	public register(chart: Chart): void {
+	public register(chart: Series): void {
 		if (this._charts.has(chart))
 			return;
 
@@ -85,7 +85,7 @@ export class PixiInput extends BaseInput {
 		this._attachEvents();
 	}
 
-	public unregister(chart: Chart): void {
+	public unregister(chart: Series): void {
 		this._charts.delete(chart);
 
 		if (this._charts.size === 0) {

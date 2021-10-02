@@ -1,5 +1,5 @@
 import type { PluggableProvider } from "../providers";
-import {IDataFetchResult, IObjectData} from "../Chart";
+import {IDataFetchResult, IObjectData} from "../ISeriesDataOptions";
 
 /**
  * Data plugin interface, used for transforming a passed data

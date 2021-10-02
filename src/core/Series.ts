@@ -1,109 +1,22 @@
-import { Matrix, Point, Rectangle } from "@pixi/math";
-import { LINE_JOIN } from "@pixi/graphics";
-import { Container, IDestroyOptions } from "@pixi/display";
-import { InteractionEvent} from "@pixi/interaction";
+import {Point, Rectangle} from "@pixi/math";
+import {LINE_JOIN} from "@pixi/graphics";
+import {Container, IDestroyOptions} from "@pixi/display";
+import {InteractionEvent} from "@pixi/interaction";
 
-import { IRangeObject, Range } from "./Range";
-import { Observable } from "./Observable";
-import { BaseDrawer } from "../drawers/";
-import { CHART_EVENTS } from "./CHART_EVENTS";
-import { CHART_TYPE } from "./CHART_TYPE";
-import {
-    ArrayChainDataProvider,
-    ArrayLikeDataProvider,
-    ObjectDataProvider,
-    PluggableProvider
-} from "./providers";
+import {Range} from "./Range";
+import {Observable} from "./Observable";
+import {BaseDrawer} from "../drawers/";
+import {CHART_EVENTS} from "./CHART_EVENTS";
+import {CHART_TYPE} from "./CHART_TYPE";
+import {ArrayChainDataProvider, ArrayLikeDataProvider, ObjectDataProvider, PluggableProvider} from "./providers";
 
-import { DataTransformPlugin } from "./plugins/DataTransformPlugin";
-import { IDrawerPlugin } from "../drawers/IDrawerPlugin";
-import { AreaDrawer, LineDrawer} from "../drawers/charts";
-import { GridDrawer } from "../drawers/grid/GridDrawer";
-import { LabelsDrawer } from "../drawers/labels/LabelsDrawer";
-import { BaseInput } from "./Input";
-
-export type ILabelData = Array<string | Date | number>;
-export type IArrayData = ArrayLike<number>;
-export type IArrayChainData = Array<[number, number]>;
-export type IObjectData = Array<{
-    x: number,
-    y: number,
-    index?: number,
-    labelX?: number | string | Date,
-    labelY?: number | string | Date
-}>
-
-export interface IDataFetchResult <T> {
-    data: T;
-    fromX: number,
-    toX: number,
-    dataBounds: IRangeObject
-}
-
-export type IData = IArrayData | IArrayChainData | IObjectData;
-
-export interface IDataSetModel {
-    data?: IData;
-}
-
-export interface ILabelDataProvider {
-    fetch(from?: number, to?: number): IDataFetchResult<ILabelData>;
-}
-
-export interface IDataProvider extends IDataSetModel {
-    fetch(from?: number, to?: number): IDataFetchResult<IObjectData>;
-}
-
-export enum LABEL_LOCATION {
-    NONE = 'none',
-    TOP = 'top',
-    BOTTOM = 'bottom',
-    LEFT = 'left',
-    RIGHT = 'right'
-}
-
-const DEFAUTL_LABELS_STYLE = {
-    x: {
-        position: LABEL_LOCATION.BOTTOM,
-    },
-    y: {
-        position: LABEL_LOCATION.LEFT
-    }
-};
-
-const DEFAULT_STYLE: IChartStyle = {
-    fill: 0x0,
-    stroke: 0x0,
-    thickness: 2,
-    lineJoint: LINE_JOIN.BEVEL,
-    labels: DEFAUTL_LABELS_STYLE,
-    clamp: true,
-    fitYRange: false,
-};
-
-export interface IChartStyle {
-    fill?: number | string | [number, number, number, number];
-    stroke?: number  | string | [number, number, number, number];
-    thickness?: number;
-    lineJoint?: string;
-    labels?: {
-        y?: {
-            position: LABEL_LOCATION;
-        } | null,
-        x?: {
-            position: LABEL_LOCATION;
-        } | null
-    },
-    clamp: boolean,
-    fitYRange: boolean
-}
-
-export interface IChartDataOptions {
-    type: CHART_TYPE;
-    labels?: ILabelData | ILabelDataProvider;
-    data: IDataSetModel | IDataProvider | IData;
-    style?: IChartStyle;
-}
+import {DataTransformPlugin} from "./plugins/DataTransformPlugin";
+import {IDrawerPlugin} from "../drawers/IDrawerPlugin";
+import {AreaDrawer, LineDrawer} from "../drawers/charts";
+import {GridDrawer} from "../drawers/grid/GridDrawer";
+import {LabelsDrawer} from "../drawers/labels/LabelsDrawer";
+import {BaseInput} from "./Input";
+import {DEFAULT_LABELS_STYLE, DEFAULT_STYLE, IData, IDataProvider, ISeriesDataOptions} from "./ISeriesDataOptions";
 
 function isValidEnum(prop: string, enumType: Record<string, any>): boolean {
     if (!prop) {
@@ -113,7 +26,7 @@ function isValidEnum(prop: string, enumType: Record<string, any>): boolean {
     return Object.values<string>(enumType).includes(prop);
 }
 
-function validate(options: IChartDataOptions): IChartDataOptions {
+function validate(options: ISeriesDataOptions): ISeriesDataOptions {
     const result = {...options};
 
     if (!options.data) {
@@ -130,7 +43,7 @@ function validate(options: IChartDataOptions): IChartDataOptions {
     result.style.lineJoint = isValidEnum(joint, LINE_JOIN) ? joint : LINE_JOIN.BEVEL;
 
     result.style.labels = {
-        x: {...DEFAUTL_LABELS_STYLE.x }, y: {...DEFAUTL_LABELS_STYLE.y },
+        x: {...DEFAULT_LABELS_STYLE.x }, y: {...DEFAULT_LABELS_STYLE.y },
         ...((options.style || {}).labels || {})
     };
 
@@ -140,7 +53,7 @@ function validate(options: IChartDataOptions): IChartDataOptions {
 /**
  * Root chart class that used for drawing a any kind of charts
  */
-export class Chart extends Container {
+export class Series extends Container {
     protected static plugins: typeof BaseDrawer[] = [];
 
     /**
@@ -192,15 +105,16 @@ export class Chart extends Container {
     /**
      * Instance a Chart with provided data, chart data should be immutable
      * Handle the drawers that will be used for current Chart instances.
-     * @param { IChartDataOptions } options
+     * @param { ISeriesDataOptions } options
      * @param { IDrawerPlugin[] } plugins Drawers object that can be used in current chart
      */
     constructor (
-        public readonly options: IChartDataOptions,
+        public readonly options: ISeriesDataOptions,
         plugins: IDrawerPlugin[] = [],
     ) {
         super();
 
+        this.name = options.name;
         this.onRangeChanged = this.onRangeChanged.bind(this);
 
         this.options = validate(options);
@@ -223,7 +137,7 @@ export class Chart extends Container {
 
         const pluginName = new Set();
 
-        for (const Ctor of Chart.plugins) {
+        for (const Ctor of Series.plugins) {
             const instance = new Ctor();
 
             if (!instance.name || pluginName.has(instance.name)) {
@@ -479,7 +393,7 @@ export class Chart extends Container {
 PluggableProvider.registerPlugin(DataTransformPlugin);
 
 // register a Chart drawer plugin
-Chart.registerPlugin(GridDrawer);
-Chart.registerPlugin(LineDrawer);
-Chart.registerPlugin(AreaDrawer);
-Chart.registerPlugin(LabelsDrawer);
+Series.registerPlugin(GridDrawer);
+Series.registerPlugin(LineDrawer);
+Series.registerPlugin(AreaDrawer);
+Series.registerPlugin(LabelsDrawer);

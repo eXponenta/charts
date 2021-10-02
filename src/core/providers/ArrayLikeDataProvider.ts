@@ -1,4 +1,4 @@
-import { IArrayChainData, IData, IDataFetchResult, IDataProvider, ILabelData, IObjectData } from "../Chart";
+import {IArrayChainData, IData, IDataFetchResult, IDataProvider, ILabelData, IObjectData} from "../ISeriesDataOptions";
 
 export class ArrayLikeDataProvider implements IDataProvider {
     constructor(

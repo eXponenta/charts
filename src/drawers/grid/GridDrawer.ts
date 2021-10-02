@@ -1,13 +1,13 @@
 import { Graphics } from "@pixi/graphics";
 import { BaseDrawer } from "../BaseDrawer";
 import { FancyLabelsPlugin } from "../../core/plugins/FancyLabelsPlugin";
-import type {Chart} from "../../core";
+import type {Series} from "../../core";
 
 export class GridDrawer extends BaseDrawer {
     public readonly name = 'GridDrawer';
     public node: Graphics = new Graphics();
 
-    init(context: Chart): boolean {
+    init(context: Series): boolean {
         this.node.zIndex = -100;
 
         return super.init(context);

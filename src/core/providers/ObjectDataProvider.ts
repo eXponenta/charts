@@ -1,5 +1,5 @@
-import {IObjectData} from "../Chart";
 import {ArrayChainDataProvider} from "./ArrayChainDataProvider";
+import {IObjectData} from "../ISeriesDataOptions";
 
 export class ObjectDataProvider extends ArrayChainDataProvider {
 	protected _fetchValueInternal(index: number): IObjectData[0] {

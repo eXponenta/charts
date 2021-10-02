@@ -1,7 +1,7 @@
-import type {IDataFetchResult, IObjectData} from "../Chart";
 import type { PluggableProvider } from "../providers";
 import type { IDataPlugin } from "./IDataPlugin";
 import { IRangeObject } from "../Range";
+import {IDataFetchResult, IObjectData} from "../ISeriesDataOptions";
 
 type DataTransformPluginResult = IDataFetchResult<IObjectData> & { trimmedSourceBounds?: IRangeObject };
 

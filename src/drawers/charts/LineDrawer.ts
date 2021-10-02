@@ -2,18 +2,18 @@ import { hex2rgb, rgb2hex } from "@pixi/utils";
 import { LINE_JOIN } from "@pixi/graphics";
 
 import { Plot } from "../../../pixi-candles/src";
-import {IArrayChainData, IDataFetchResult, IObjectData} from "../../core/Chart";
 import { CHART_TYPE } from '../../core/CHART_TYPE';
 import { BaseDrawer } from "../BaseDrawer";
 
-import type { Chart } from  '../../core/Chart';
+import type { Series } from '../../core/Series';
+import {IArrayChainData, IDataFetchResult, IObjectData} from "../../core/ISeriesDataOptions";
 
 export class LineDrawer extends BaseDrawer {
     public readonly name = 'LineDrawer';
     public readonly node: Plot = new Plot(null);
     public lastDrawedFetch: IDataFetchResult<IObjectData>;
 
-    public init(context: Chart): boolean {
+    public init(context: Series): boolean {
         super.init(context);
 
         return (

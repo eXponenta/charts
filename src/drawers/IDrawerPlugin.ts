@@ -1,5 +1,5 @@
 import { DisplayObject } from "@pixi/display";
-import { Chart } from "../core";
+import { Series } from "../core";
 
 /**
  * Plugin interface for drawing something in chart
@@ -19,9 +19,9 @@ export interface IDrawerPlugin {
      * Init pluging, called once after Chart construction.
      * Should return true if exist for adding as drawer
      * Can be used for validating passed data to Charts
-     * @param { Chart } context
+     * @param { Series } context
      */
-    init (context: Chart): boolean;
+    init (context: Series): boolean;
 
     /**
      * Called before draw every mutation (like viewport change etc), should return a true when a DRAW required

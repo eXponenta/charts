@@ -1,5 +1,6 @@
-import type { Chart, IArrayChainData, IDataFetchResult, IDataProvider, IObjectData } from "../Chart";
+import type { Series} from "../Series";
 import { IDataPlugin, IFunctionDataPlugin } from "../plugins/IDataPlugin";
+import {IArrayChainData, IDataFetchResult, IDataProvider, IObjectData} from "../ISeriesDataOptions";
 
 /**
  * Validate a type of plugin and return valid plugin
@@ -74,7 +75,7 @@ export class PluggableProvider implements IDataProvider, IDataPlugin {
 
     constructor(
         public sourceProvider: IDataProvider,
-        public chart: Chart,
+        public chart: Series,
         plugins: IDataPlugin[] = []
     ) {
         this._plugins = [
