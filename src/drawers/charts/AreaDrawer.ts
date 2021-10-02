@@ -41,6 +41,9 @@ export class AreaDrawer extends BaseDrawer {
             );
         }
 
+        // we should suppress optimisation on this case
+        this._lineDrawer.alwaysUpdate = true;
+
         this.node.zIndex = this._lineDrawer.node.zIndex - 1;
         this.node.addChild(this._areaNode);
 
@@ -64,7 +67,7 @@ export class AreaDrawer extends BaseDrawer {
         area.coordTop = 0;
 
         const viewport = this.context.limits;
-        const dataBounds = this._lineDrawer.lastDrawedFetch.dataBounds;
+        const dataBounds = this._lineDrawer.lastDrawnFetch.dataBounds;
 
         area.coordBottom = Math.max(viewport.height - dataBounds.fromY, viewport.height);
 

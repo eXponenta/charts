@@ -6,15 +6,17 @@ import { CHART_TYPE } from '../../core/CHART_TYPE';
 import { BaseDrawer } from "../BaseDrawer";
 
 import type { Series } from '../../core/Series';
-import {IArrayChainData, IDataFetchResult, IObjectData} from "../../core/ISeriesDataOptions";
+import { IDataFetchResult, IObjectData } from "../../core/ISeriesDataOptions";
 
 export class LineDrawer extends BaseDrawer {
     public readonly name = 'LineDrawer';
     public readonly node: Plot = new Plot(null);
-    public lastDrawedFetch: IDataFetchResult<IObjectData>;
+    public lastDrawnFetch: IDataFetchResult<IObjectData>;
+    public alwaysUpdate: boolean = false;
 
     public init(context: Series): boolean {
         super.init(context);
+        this.alwaysUpdate = context.options.type === CHART_TYPE.AREA;
 
         return (
             context.options.type === CHART_TYPE.AREA ||
@@ -27,6 +29,8 @@ export class LineDrawer extends BaseDrawer {
      * @param force - Update any case, no check a alpha === 0
      */
     public update(force = false): boolean {
+        force = force || this.alwaysUpdate;
+
         const node = this.node;
         const {
             height
@@ -45,12 +49,12 @@ export class LineDrawer extends BaseDrawer {
 
         node.clear();
 
-        this.lastDrawedFetch = dataProvider.fetch();
+        this.lastDrawnFetch = dataProvider.fetch();
 
         const {
             data,
             dataBounds
-        } = this.lastDrawedFetch;
+        } = this.lastDrawnFetch;
 
         node.lineStyle(style.thickness || 2, void 0, style.lineJoint as LINE_JOIN);
 

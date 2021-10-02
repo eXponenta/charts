@@ -11,6 +11,7 @@ Renderer.registerPlugin('batch', BatchRenderer);
 Renderer.registerPlugin('interaction', InteractionManager);
 
 export class Chart {
+    readonly series: Set<Series> = new Set<Series>();
     readonly ticker: Ticker = new Ticker();
     readonly renderer: Renderer;
     readonly stage: Container = new Container();
@@ -51,7 +52,7 @@ export class Chart {
         //@ts-ignore
         if (self.ResizeObserver) {
             //@ts-ignore
-            new self.ResizeObserver(this.onDimensionUpdate).observe(view);
+            new self.ResizeObserver(this.onDimensionUpdateLazy).observe(view);
         }
 
         this.ticker.add(this.update);
@@ -83,8 +84,8 @@ export class Chart {
             this.size.height
         );
 
-        this.stage.children
-            .forEach(e => (<Series> e).setViewport(0,0, this.size.width, this.size.height) )
+        this.series
+            .forEach(e => e.setViewport(0,0, this.size.width, this.size.height) )
     }
 
     private onSeriesUpdate(chart: Series) {
@@ -110,7 +111,7 @@ export class Chart {
         if (data.parent instanceof Series) {
             parent = data.parent;
 
-            if (!this.stage.children.includes(data.parent)) {
+            if (!this.series.has(data.parent)) {
                 console.warn('Series parent must be attached to same Chart');
                 parent = null;
             }
@@ -162,37 +163,46 @@ export class Chart {
     }
 
     public getByName(name: string): Series | null {
-        return this.stage.children.find((el) => (<Series>el).name === name) as Series;
+        for (const s of  this.series) {
+            if (s.name === name) {
+                return s;
+            }
+        }
+
+        return null;
     }
 
     public get tall(): Series | null {
-        return this.stage.children[this.stage.children.length - 1] as Series || null;
+        return [...this.series].pop();
     }
 
     public addSeries(series: Series, name = 'series_' + this.stage.children.length): Series {
-        if (this.stage.children.includes(series)) {
+        if (this.series.has(series)) {
             return  series;
         }
+
+        this.series.add(series);
 
         series.name = series.name || name;
         series.setViewport(0,0, this.size.width, this.size.height);
 
         this._bindEvents(series);
 
-        this.stage.addChild(series);
+        this.stage.addChild(series.node);
 
         return series;
     }
 
     public removeSeries(name: string): Series {
-        const chart: Series = this.stage.children.find( (e: any) => e.name === name) as Series;
-
-        if (chart) {
-            this._unbindEvents(chart);
-            this.stage.removeChild(chart)
+        const series = this.getByName(name);
+        if (!series) {
+            return ;
         }
 
-        return chart;
+        this._unbindEvents(series);
+        this.stage.removeChild(series.node)
+
+        return series;
     }
 
     private _unbindEvents (chart: Series): void {
@@ -212,8 +222,8 @@ export class Chart {
     protected update() {
         this.input.update(this.ticker.elapsedMS);
 
-        for (const chart of this.stage.children) {
-            (<Series> chart).update();
+        for (const series of this.series) {
+            series.update();
         }
     }
 
@@ -224,8 +234,8 @@ export class Chart {
 
         let dirtySeries = 0;
 
-        for (const series of this.stage.children) {
-            if((<Series> series).draw()) {
+        for (const series of this.series) {
+            if(series.draw()) {
                 dirtySeries ++;
             }
         }

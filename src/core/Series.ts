@@ -17,6 +17,7 @@ import {GridDrawer} from "../drawers/grid/GridDrawer";
 import {LabelsDrawer} from "../drawers/labels/LabelsDrawer";
 import {BaseInput} from "./Input";
 import {DEFAULT_LABELS_STYLE, DEFAULT_STYLE, IData, IDataProvider, ISeriesDataOptions} from "./ISeriesDataOptions";
+import {EventEmitter} from "@pixi/utils";
 
 function isValidEnum(prop: string, enumType: Record<string, any>): boolean {
     if (!prop) {
@@ -53,7 +54,7 @@ function validate(options: ISeriesDataOptions): ISeriesDataOptions {
 /**
  * Root chart class that used for drawing a any kind of charts
  */
-export class Series extends Container {
+export class Series extends EventEmitter {
     protected static plugins: typeof BaseDrawer[] = [];
 
     /**
@@ -79,9 +80,11 @@ export class Series extends Container {
      * Input service that attached on current chart
      */
     public input: BaseInput | null;
-
+    public readonly node: Container = new Container();
     public readonly range: Range = new Range();
     public readonly limits: Range = new Range();
+    public parent: Series;
+
 
     public dataProvider: PluggableProvider;
 
@@ -120,12 +123,14 @@ export class Series extends Container {
         this.options = validate(options);
         this.range.on(Observable.CHANGE_EVENT, this.onRangeChanged);
 
-        this.interactive = true;
-        this.interactiveChildren = false;
+        this.node.interactive = true;
+        this.node.interactiveChildren = false;
 
         this.preparePlugins(plugins);
 
-        this.on('pointermove', this.onDrag);
+        // TODO
+        // Rebound onto input
+        this.node.on('pointermove', this.onDrag, this);
         document.addEventListener('wheel', this.onWheel.bind(this));
 
         // first init
@@ -172,11 +177,11 @@ export class Series extends Container {
             this._activePlugins.push(plugin);
 
             if (plugin.node) {
-                this.addChild(plugin.node);
+                this.node.addChild(plugin.node);
             }
         }
 
-        this.sortChildren();
+        this.node.sortChildren();
     }
 
     public update(): boolean {
@@ -214,14 +219,14 @@ export class Series extends Container {
         }
 
         // remove all childs
-        this.removeChildren();
+        this.node.removeChildren();
         this._activePlugins.length = 0;
 
         this._drawId = this._updateId = -1;
     }
 
     public destroy(_options?: IDestroyOptions | boolean): void {
-        super.destroy(_options);
+        this.node.destroy(_options);
 
         this.reset();
 
@@ -364,7 +369,7 @@ export class Series extends Container {
     }
 
     public setViewport (x: number, y: number, width: number, height: number): void {
-        this.hitArea = new Rectangle(x, y, width, height);
+        this.node.hitArea = new Rectangle(x, y, width, height);
         this.limits.set({
             fromX: x, fromY: y, toX: x + width, toY: y + height
         });
