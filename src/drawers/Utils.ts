@@ -1,6 +1,6 @@
 //@ts-ignore
 import parseColor from "color-parse";
-import {ISeriesStyle} from "../core/ISeriesDataOptions";
+import { ISeriesStyle } from "../core/ISeriesDataOptions";
 
 const FIELDS = ['fill', 'stroke'];
 
@@ -16,7 +16,13 @@ export function parseStyle (style: ISeriesStyle): ISeriesStyle {
         // default
         parsed[key] = [0,0,0,1];
 
-        if (orig == null) {
+        if (orig === void 0) {
+            continue;
+        }
+
+        if (orig === null || orig === 'none') {
+            // transparent for null
+            parsed[key] = [0,0,0,0];
             continue;
         }
 
