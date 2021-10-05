@@ -15,6 +15,13 @@ export class Transform extends EventEmitter implements  ITransorm {
     sx: number = 1;
     sy: number = 1;
 
+    apply(from: {x: number, y: number}, to: {x: number, y: number} = {...from}) {
+        to.x = from.x * this.sx + this.tx;
+        to.y = from.y * this.sy + this.ty;
+
+        return to;
+    }
+
     translate (tx = 0, ty = tx): this {
         this.tx += tx;
         this.ty += ty;
@@ -28,7 +35,7 @@ export class Transform extends EventEmitter implements  ITransorm {
         this.sx = t.sx;
         this.sy = t.sy;
         this.tx = t.tx;
-        this.ty = t.tx;
+        this.ty = t.ty;
 
         this._change();
     }
@@ -51,18 +58,19 @@ export class Transform extends EventEmitter implements  ITransorm {
         this._change();
     }
 
-    invert(): this {
+    invert(self = true): Transform {
         const sx = this.sx;
         const sy = this.sy;
 
-        this.sx = 1 / sx;
-        this.sy = 1 / sy;
-        this.tx = - sx * this.tx;
-        this.ty = - sy * this.ty;
+        const target = self ? this : new Transform();
+        target.sx = 1 / sx;
+        target.sy = 1 / sy;
+        target.tx = - sx * this.tx;
+        target.ty = - sy * this.ty;
 
-        this._change();
+        target._change();
 
-        return this;
+        return target;
     }
 
     mul(transform: Transform, self = true): Transform {

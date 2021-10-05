@@ -34,7 +34,7 @@ export class LineDrawer extends BaseDrawer {
         const node = this.node;
         const {
             height
-        } = this.context.range;
+        } = this.context.limits;
 
         const {
             dataProvider,

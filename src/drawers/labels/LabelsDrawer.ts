@@ -123,7 +123,7 @@ export class LabelsDrawer extends BaseDrawer {
         );
     }
 
-    private _updateXAxis(data: IDataFetchResult<IObjectData>) {
+    private _updateYAxis(data: IDataFetchResult<IObjectData>) {
         const {
             limits, options
         } = this.context;
@@ -159,7 +159,7 @@ export class LabelsDrawer extends BaseDrawer {
         this._yTicks.y = 0;
     }
 
-    private _updateYAxis(data: IDataFetchResult<IObjectData>) {
+    private _updateXAxis(data: IDataFetchResult<IObjectData>) {
         const {
             limits, options
         } = this.context;
@@ -197,15 +197,6 @@ export class LabelsDrawer extends BaseDrawer {
 
 
     public update(): boolean {
-        const node = this.node;
-
-        /*
-        node.clear();
-        node
-            .beginFill(0xffffff)
-            .lineStyle({width: LABEL_TICKS_THICKNESS, color: 0})
-        */
-
         this.context.dataProvider.use(this._fancyPlugin);
         const data = this.context.dataProvider.fetch();
 

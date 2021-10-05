@@ -2,8 +2,9 @@ import type { PluggableProvider } from "../providers";
 import type { IDataPlugin } from "./IDataPlugin";
 import { IRangeObject } from "../Range";
 import {IDataFetchResult, IObjectData} from "../ISeriesDataOptions";
+import {Transform} from "../Transform";
 
-type DataTransformPluginResult = IDataFetchResult<IObjectData> & { trimmedSourceBounds?: IRangeObject };
+type DataTransformPluginResult = IDataFetchResult<IObjectData> & { trimmedSourceBounds?: IRangeObject, transform?: Transform };
 
 class DataBounds implements IRangeObject {
     fromX = Infinity;
@@ -46,10 +47,6 @@ export class DataTransformPlugin implements IDataPlugin {
 	processElements(result: DataTransformPluginResult, source: IDataFetchResult<IObjectData>): DataTransformPluginResult {
 	    const chart = this.context.chart;
 		const {
-			fromX, fromY, width, height
-		} = chart.range;
-
-		const {
 		    fitYRange
         } = chart.options.style;
 
@@ -64,31 +61,20 @@ export class DataTransformPlugin implements IDataPlugin {
             ? chart.parent.dataProvider.sourceProvider.fetch().dataBounds
             : source.dataBounds;
 
-		const dw = b.toX - b.fromX || 1;
-		const dh = b.toY - b.fromY || 1;
 
-		const sx = width / dw;
-		const sy = height / dh;
+        const t = chart.range.decomposeFrom(b);
 		const output = [];
-
-		const transform = ({ x, y, ...other } : {x: number, y: number}) => {
-		    return {
-		        ...other,
-                x: fromX + (x - b.fromX) * sx,
-                y: fromY + (y - b.fromY) * sy,
-            }
-        };
 
         const outBounds = new DataBounds();
         const trimmedBounds = new DataBounds();
 
         for (let i = 0; i < data.length; i ++) {
             const input = data[i];
-		    const current = transform(input);
+		    const current = t.apply(input);
 
             if (this.reduceXRange) {
                 if (current.x < limitRight && (i + 1) < data.length) {
-                    const next = transform(data[i + 1]);
+                    const next = t.apply(data[i + 1]);
 
                     if (next.x < limitLeft) {
                         continue;
@@ -96,10 +82,10 @@ export class DataTransformPlugin implements IDataPlugin {
                 }
 
                 if (current.x > limitRight && i > 0) {
-                    const prev = transform(data[i - 1]);
+                    const prev = t.apply(data[i - 1]);
 
                     if (prev.x > limitRight) {
-                        continue;
+                        break;
                     }
                 }
             }
@@ -113,6 +99,10 @@ export class DataTransformPlugin implements IDataPlugin {
         }
 
         if (fitYRange) {
+            const {
+                fromY, height
+            } = chart.range;
+
             // rescale Y auto ranged
             for (const out of output) {
                 out.y = (fromY + (out.y - outBounds.fromY) * height / (outBounds.toY - outBounds.fromY));
@@ -122,9 +112,8 @@ export class DataTransformPlugin implements IDataPlugin {
             outBounds.fromY = fromY;
         }
 
-
+        result.transform = t;
         result.data = output;
-
         result.dataBounds = outBounds;
 		result.trimmedSourceBounds = trimmedBounds;
 

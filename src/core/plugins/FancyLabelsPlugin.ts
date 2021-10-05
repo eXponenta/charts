@@ -4,6 +4,7 @@ import type { IRangeObject } from '../Range';
 
 import generate from 'nice-ticks';
 import {IDataFetchResult, IObjectData} from "../ISeriesDataOptions";
+import {Transform} from "../Transform";
 
 /**
  * Data plugin for generation a nice tics/labels
@@ -28,20 +29,19 @@ export class FancyLabelsPlugin implements IDataPlugin {
         return true;
     }
 
-    processElements(result: IDataFetchResult<IObjectData> & {trimmedSourceBounds?: IRangeObject}, source: IDataFetchResult<IObjectData>): IDataFetchResult<IObjectData> {
+    processElements(result: IDataFetchResult<IObjectData> & {trimmedSourceBounds?: IRangeObject, transform: Transform}, source: IDataFetchResult<IObjectData>): IDataFetchResult<IObjectData> {
         /**
          * @todo
          * Do this more clear, atm we depend of data transformer trimmed output and fit options and this will invalid if there are another data processor
          * try to use a source data and results for computing valid ticks
          */
         const data: IObjectData = [];
-        const fitY = this.context.chart.options.style.fitYRange;
-        const limits = this.context.chart.limits;
+        const chart = this.context.chart;
+        const fitY = chart.options.style.fitYRange;
+        const limits = chart.limits;
         const resultBounds = result.dataBounds;
-        const sourceBounds = source.dataBounds;
 
         // fitY? What will be when fitted result is shifted?
-        const scaleX = fitY ? limits.width : resultBounds.toX - resultBounds.fromX;
         let scaleY = fitY ? limits.height : resultBounds.toY - resultBounds.fromY;
 
         let minX = result.trimmedSourceBounds.fromX;
@@ -70,15 +70,11 @@ export class FancyLabelsPlugin implements IDataPlugin {
             const labelX = i < xLen ? x.toFixed(0) : null;
             const labelY = i < yLen ? y.toFixed(0) : null;
 
-            x = (x - minX) / (maxX - minX);
-            y = (y - minY) / (maxY - minY);
-
-            x = x * scaleX + resultBounds.fromX;
-            y = y * limits.height;// resultBounds.fromY;
+            const out = result.transform.apply({x, y});
 
             data.push({
-                x: Math.round(x),
-                y: Math.round(y),
+                x: Math.round(out.x),
+                y: Math.round(out.y),
                 labelX,
                 labelY
             });

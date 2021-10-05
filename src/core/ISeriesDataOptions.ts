@@ -51,6 +51,16 @@ export const DEFAULT_LABELS_STYLE = {
 		position: LABEL_LOCATION.LEFT
 	}
 };
+
+export const DEFAULT_LABELS_STYLE_PARENT = {
+    x: {
+        position: LABEL_LOCATION.NONE,
+    },
+    y: {
+        position: LABEL_LOCATION.RIGHT
+    }
+};
+
 export const DEFAULT_STYLE: ISeriesStyle = {
 	fill: 0x0,
 	stroke: 0x0,

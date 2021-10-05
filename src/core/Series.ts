@@ -16,7 +16,14 @@ import {AreaDrawer, LineDrawer} from "../drawers/charts";
 import {GridDrawer} from "../drawers/grid/GridDrawer";
 import {LabelsDrawer} from "../drawers/labels/LabelsDrawer";
 import {BaseInput} from "./Input";
-import {DEFAULT_LABELS_STYLE, DEFAULT_STYLE, IData, IDataProvider, ISeriesDataOptions} from "./ISeriesDataOptions";
+import {
+    DEFAULT_LABELS_STYLE,
+    DEFAULT_LABELS_STYLE_PARENT,
+    DEFAULT_STYLE,
+    IData,
+    IDataProvider,
+    ISeriesDataOptions
+} from "./ISeriesDataOptions";
 import {EventEmitter} from "@pixi/utils";
 import {Chart} from "../Chart";
 import {Transform} from "./Transform";
@@ -45,10 +52,17 @@ function validate(options: ISeriesDataOptions): ISeriesDataOptions {
     const joint = result.style.lineJoint;
     result.style.lineJoint = isValidEnum(joint, LINE_JOIN) ? joint : LINE_JOIN.BEVEL;
 
-    result.style.labels = {
-        x: {...DEFAULT_LABELS_STYLE.x }, y: {...DEFAULT_LABELS_STYLE.y },
-        ...((options.style || {}).labels || {})
-    };
+    if (options.parent) {
+        result.style.labels = {
+            x: {...DEFAULT_LABELS_STYLE_PARENT.x}, y: {...DEFAULT_LABELS_STYLE_PARENT.y},
+            ...((options.style || {}).labels || {})
+        };
+    } else {
+        result.style.labels = {
+            x: {...DEFAULT_LABELS_STYLE.x}, y: {...DEFAULT_LABELS_STYLE.y},
+            ...((options.style || {}).labels || {})
+        };
+    }
 
     return result;
 }
@@ -78,11 +92,20 @@ export class Series extends EventEmitter {
     private readonly _plugins: IDrawerPlugin[] = [];
     private readonly _activePlugins: IDrawerPlugin[] = [];
     private readonly _range: Range = new Range();
+    private readonly _localTransform = new Transform();
+    private readonly _worldTransform = new Transform();
 
-    public transform: Transform = new Transform();
-    //private readonly _local
+    public get transform(): Transform {
+        if (this.parent) {
+            this._worldTransform.set(this.parent.transform)
+            this._worldTransform.mul(this._localTransform);
+        } else {
+            this._worldTransform.set(this._localTransform);
+        }
 
-    //public  range: Range = new Range();
+        return this._worldTransform;
+    }
+
     public  limits: Range = new Range();
 
     /**
@@ -105,15 +128,7 @@ export class Series extends EventEmitter {
 
     public get range() {
         this._range.set(this.limits);
-
-        let total = this.transform;
-
-        if (this.parent) {
-            total = this.transform.mul(this.parent.transform, false);
-        }
-
-        this._range.transform(total);
-
+        this._range.transform(this.transform);
 
         return this._range;
     }
@@ -158,7 +173,7 @@ export class Series extends EventEmitter {
         this.context = context;
         this.input = context.input;
 
-        this.transform.on(Transform.CHANGE, this.onRangeChanged);
+        this._localTransform.on(Transform.CHANGE, this.onRangeChanged);
 
         if (this.parent) {
             this.parent.transform.on(Transform.CHANGE, this.onRangeChanged);
@@ -176,7 +191,7 @@ export class Series extends EventEmitter {
     }
 
     public unbind (context: Chart) {
-        this.transform.off(Transform.CHANGE, this.onRangeChanged);
+        this._localTransform.off(Transform.CHANGE, this.onRangeChanged);
         if (this.parent) {
             this.parent.transform.off(Transform.CHANGE, this.onRangeChanged);
         }
@@ -300,14 +315,14 @@ export class Series extends EventEmitter {
     private scaleAtPoint (point: Point, sx: number, sy: number) {
         const clamp = this.options.style.clamp;
 
-        this.transform.translate(-point.x, -point.y);
-        this.transform.scale(sx, sy);
-        this.transform.translate(point.x, point.y);
+        this._localTransform.translate(-point.x, -point.y);
+        this._localTransform.scale(sx, sy);
+        this._localTransform.translate(point.x, point.y);
 
         if (clamp) {
             this._range.set(this.limits);
-            this._range.transform(this.transform, this.limits);
-            this._range.decomposeFrom(this.limits, this.transform);
+            this._range.transform(this._localTransform, this.limits);
+            this._range.decomposeFrom(this.limits, this._localTransform);
         }
 
         this._emitUpdate();
@@ -320,13 +335,13 @@ export class Series extends EventEmitter {
             clamp
         } = this.options.style;
 
-        this.transform.translate(tx, ty);
-        this.transform.scale(sx, sy);
+        this._localTransform.translate(tx, ty);
+        this._localTransform.scale(sx, sy);
 
         if (clamp) {
             this._range.set(this.limits);
-            this._range.transform(this.transform, this.limits);
-            this._range.decomposeFrom(this.limits, this.transform);
+            this._range.transform(this._localTransform, this.limits);
+            this._range.decomposeFrom(this.limits, this._localTransform);
         }
 
         this._emitUpdate();
@@ -443,11 +458,19 @@ export class Series extends EventEmitter {
 
     public setViewport (x: number, y: number, width: number, height: number): void {
         this.node.hitArea = new Rectangle(x, y, width, height);
+
+        if (!this.parent) {
+            this._range.set(this.limits);
+        }
+
         this.limits.set({
             fromX: x, fromY: y, toX: x + width, toY: y + height
         });
 
-        //this.range.clampToMin(this.limits);
+        if (!this.parent) {
+            this._range.clampToMin(this.limits);
+            this._range.decomposeFrom(this.limits, this._localTransform, 'right');
+        }
 
         this.emit(CHART_EVENTS.RESIZE, this);
         this._emitUpdate();

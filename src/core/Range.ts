@@ -126,15 +126,22 @@ export class Range extends Observable<IRangeObject> {
 
     /**
      * Compute transformation between this range and required
-     * @param source
      */
-    public decomposeFrom (source: Range, transform?: Transform): Transform {
+    public decomposeFrom (source: IRangeObject, transform?: Transform, align = 'left'): Transform {
         const t = transform || new Transform();
+        const sw = source.toX - source.fromX;
+        const sh = source.toY - source.fromY;
 
-        t.sx = (this.width / source.width) || 1;
-        t.sy = (this.height / source.height) || 1;
-        t.tx = (this.fromX - source.fromX);
-        t.ty = (this.fromY - source.fromY);
+        t.sx = (this.width / sw) || 1;
+        t.sy = (this.height / sh) || 1;
+
+        if (align === 'left') {
+            t.tx = (this.fromX - source.fromX);
+            t.ty = (this.fromY - source.fromY);
+        } else {
+            t.tx = -(this.toX - source.toX);
+            t.ty = -(this.toY - source.toY);
+        }
 
         return t;
     }
