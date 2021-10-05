@@ -113,7 +113,7 @@ export class LabelsDrawer extends BaseDrawer {
         } = context.options.style.labels;
 
         if (context.parent) {
-            return false;
+            //return false;
         }
 
         return (

@@ -44,22 +44,26 @@ export class DataTransformPlugin implements IDataPlugin {
 	 * @inheritDoc
 	 */
 	processElements(result: DataTransformPluginResult, source: IDataFetchResult<IObjectData>): DataTransformPluginResult {
+	    const chart = this.context.chart;
 		const {
 			fromX, fromY, width, height
-		} = this.context.chart.range;
+		} = chart.range;
 
 		const {
 		    fitYRange
-        } = this.context.chart.options.style;
+        } = chart.options.style;
 
 		const data = result.data;
 
 		let {
 		    fromX: limitLeft,
             toX: limitRight
-        } = this.context.chart.limits;
+        } = chart.limits;
 
-		const b = result.dataBounds;
+		const b = chart.parent
+            ? chart.parent.dataProvider.sourceProvider.fetch().dataBounds
+            : source.dataBounds;
+
 		const dw = b.toX - b.fromX || 1;
 		const dh = b.toY - b.fromY || 1;
 

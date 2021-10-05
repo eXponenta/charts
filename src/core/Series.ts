@@ -1,4 +1,4 @@
-import {Point, Rectangle} from "@pixi/math";
+import {DEG_TO_RAD, Point, Rectangle} from "@pixi/math";
 import {LINE_JOIN} from "@pixi/graphics";
 import {Container, IDestroyOptions} from "@pixi/display";
 import {InteractionEvent} from "@pixi/interaction";
@@ -19,6 +19,7 @@ import {BaseInput} from "./Input";
 import {DEFAULT_LABELS_STYLE, DEFAULT_STYLE, IData, IDataProvider, ISeriesDataOptions} from "./ISeriesDataOptions";
 import {EventEmitter} from "@pixi/utils";
 import {Chart} from "../Chart";
+import {Transform} from "./Transform";
 
 function isValidEnum(prop: string, enumType: Record<string, any>): boolean {
     if (!prop) {
@@ -76,10 +77,13 @@ export class Series extends EventEmitter {
 
     private readonly _plugins: IDrawerPlugin[] = [];
     private readonly _activePlugins: IDrawerPlugin[] = [];
+    private readonly _range: Range = new Range();
 
-    public  range: Range = new Range();
+    public transform: Transform = new Transform();
+    //private readonly _local
+
+    //public  range: Range = new Range();
     public  limits: Range = new Range();
-
 
     /**
      * Chart name
@@ -98,6 +102,21 @@ export class Series extends EventEmitter {
     public parent: Series | null;
 
     public dataProvider: PluggableProvider;
+
+    public get range() {
+        this._range.set(this.limits);
+
+        let total = this.transform;
+
+        if (this.parent) {
+            total = this.transform.mul(this.parent.transform, false);
+        }
+
+        this._range.transform(total);
+
+
+        return this._range;
+    }
 
     private _lastPressedMousePoint: Point;
     private _lastMousePoint: Point;
@@ -139,13 +158,11 @@ export class Series extends EventEmitter {
         this.context = context;
         this.input = context.input;
 
-        if (parent) {
-            this.range = parent.range;
-        } else {
-            this.range = new Range(this.limits);
-        }
+        this.transform.on(Transform.CHANGE, this.onRangeChanged);
 
-        this.range.on(Observable.CHANGE_EVENT, this.onRangeChanged);
+        if (this.parent) {
+            this.parent.transform.on(Transform.CHANGE, this.onRangeChanged);
+        }
 
         this.node.interactive = true;
         this.node.interactiveChildren = false;
@@ -159,7 +176,11 @@ export class Series extends EventEmitter {
     }
 
     public unbind (context: Chart) {
-        this.range.off(Observable.CHANGE_EVENT, this.onRangeChanged);
+        this.transform.off(Transform.CHANGE, this.onRangeChanged);
+        if (this.parent) {
+            this.parent.transform.off(Transform.CHANGE, this.onRangeChanged);
+        }
+
         this.node.interactive = false;
         this.node.interactiveChildren = false;
 
@@ -170,6 +191,7 @@ export class Series extends EventEmitter {
 
         this.context = null;
         this.input = null;
+        this.parent = null;
     }
 
     protected preparePlugins (externalPlugins: IDrawerPlugin[]) {
@@ -276,16 +298,19 @@ export class Series extends EventEmitter {
     }
 
     private scaleAtPoint (point: Point, sx: number, sy: number) {
-        this.range.suspended = true;
+        const clamp = this.options.style.clamp;
 
-        this.range.translate(-point.x, -point.y);
-        this.range.scale(sx, sy);
-        this.range.translate(point.x, point.y);
+        this.transform.translate(-point.x, -point.y);
+        this.transform.scale(sx, sy);
+        this.transform.translate(point.x, point.y);
 
-        if (this.options.style.clamp) {
-            this.range.clampToMin(this.limits);
+        if (clamp) {
+            this._range.set(this.limits);
+            this._range.transform(this.transform, this.limits);
+            this._range.decomposeFrom(this.limits, this.transform);
         }
-        this.range.suspended = false;
+
+        this._emitUpdate();
     }
 
     private transformRange({
@@ -295,12 +320,16 @@ export class Series extends EventEmitter {
             clamp
         } = this.options.style;
 
-        this.range.suspended = true;
+        this.transform.translate(tx, ty);
+        this.transform.scale(sx, sy);
 
-        this.range.translate(tx, ty, clamp ?  this.limits : null);
-        this.range.scale(sx, sy, clamp ? this.limits : null);
+        if (clamp) {
+            this._range.set(this.limits);
+            this._range.transform(this.transform, this.limits);
+            this._range.decomposeFrom(this.limits, this.transform);
+        }
 
-        this.range.suspended = false;
+        this._emitUpdate();
     }
 
     private onWheel(event: WheelEvent): void {
@@ -418,7 +447,7 @@ export class Series extends EventEmitter {
             fromX: x, fromY: y, toX: x + width, toY: y + height
         });
 
-        this.range.clampToMin(this.limits);
+        //this.range.clampToMin(this.limits);
 
         this.emit(CHART_EVENTS.RESIZE, this);
         this._emitUpdate();

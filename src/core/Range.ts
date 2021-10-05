@@ -1,5 +1,6 @@
 import { Observable } from "./Observable";
 import {Matrix} from "@pixi/math";
+import {Transform} from "./Transform";
 
 export interface IRangeObject {
     fromX?: number;
@@ -109,7 +110,7 @@ export class Range extends Observable<IRangeObject> {
                 // looks to right and clamp by max
             } else if (ty < 0) {
                 this.toY = Math.max(this._toY + ty, limit.toY);
-                this.fromY = this.toX - (_toY - _fromY);
+                this.fromY = this.toY - (_toY - _fromY);
             }
 
         } else {
@@ -127,17 +128,20 @@ export class Range extends Observable<IRangeObject> {
      * Compute transformation between this range and required
      * @param source
      */
-    public decomposeFrom (source: Range): IRangeTransform {
-        const t: IRangeTransform = {
-            sx: 1, sy: 1, tx: 0, ty: 0
-        };
+    public decomposeFrom (source: Range, transform?: Transform): Transform {
+        const t = transform || new Transform();
 
         t.sx = (this.width / source.width) || 1;
         t.sy = (this.height / source.height) || 1;
-        t.tx = this.fromX - source.fromX;
-        t.ty = this.fromY - source.fromY
+        t.tx = (this.fromX - source.fromX);
+        t.ty = (this.fromY - source.fromY);
 
         return t;
+    }
+
+    public transform(transform: IRangeTransform, limit?: Range) {
+        this.scale(transform.sx, transform.sy, limit);
+        this.translate(transform.tx, transform.ty, limit);
     }
 
     /**
