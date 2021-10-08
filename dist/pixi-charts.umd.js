@@ -1,8 +1,8 @@
 /* eslint-disable */
  
 /*!
- * @pixi/charts - v0.2.1
- * Compiled Fri, 24 Sep 2021 10:56:27 UTC
+ * @pixi/charts - v0.2.2
+ * Compiled Fri, 08 Oct 2021 11:06:39 UTC
  *
  * @pixi/charts is licensed under the MIT License.
  * http://www.opensource.org/licenses/mit-license
@@ -4013,6 +4013,94 @@ this.PIXI.charts = this.PIXI.charts || {};
         }
     } Observable.__initStatic();
 
+    class Transform extends utils.EventEmitter  {constructor(...args) { super(...args); Transform.prototype.__init.call(this);Transform.prototype.__init2.call(this);Transform.prototype.__init3.call(this);Transform.prototype.__init4.call(this); }
+         static  __initStatic() {this.CHANGE = 'CHANGE';}
+
+        __init() {this.tx = 0;}
+        __init2() {this.ty = 0;}
+        __init3() {this.sx = 1;}
+        __init4() {this.sy = 1;}
+
+        apply(from, to = {...from}) {
+            to.x = from.x * this.sx + this.tx;
+            to.y = from.y * this.sy + this.ty;
+
+            return to;
+        }
+
+        translate (tx = 0, ty = tx) {
+            this.tx += tx;
+            this.ty += ty;
+
+            this._change();
+
+            return this;
+        }
+
+        set (t) {
+            this.sx = t.sx;
+            this.sy = t.sy;
+            this.tx = t.tx;
+            this.ty = t.ty;
+
+            this._change();
+        }
+
+        scale (sx = 1, sy = 1) {
+            this.sx *= sx;
+            this.sy *= sy;
+            this.tx *= sx;
+            this.ty *= sy;
+
+            this._change();
+
+            return this;
+        }
+
+        identity() {
+            this.tx = this.sx = 0;
+            this.sx = this.sy = 1;
+
+            this._change();
+        }
+
+        invert(self = true) {
+            const sx = this.sx;
+            const sy = this.sy;
+
+            const target = self ? this : new Transform();
+            target.sx = 1 / sx;
+            target.sy = 1 / sy;
+            target.tx = - sx * this.tx;
+            target.ty = - sy * this.ty;
+
+            target._change();
+
+            return target;
+        }
+
+        mul(transform, self = true) {
+            const {
+                tx, ty, sx, sy
+            } = this;
+
+            const target = self ? this : new Transform();
+
+            target.sx = transform.sx * sx;
+            target.sy = transform.sy * sy;
+            target.tx = transform.tx * sx + tx;
+            target.ty = transform.ty * sy + ty;
+
+            this._change();
+
+            return target;
+        }
+
+         _change() {
+            this.emit(Transform.CHANGE, this);
+        }
+    } Transform.__initStatic();
+
     class Range extends Observable {
          __init() {this._fromX = 0;}
          __init2() {this._toX = 0;}
@@ -4107,7 +4195,7 @@ this.PIXI.charts = this.PIXI.charts || {};
                     // looks to right and clamp by max
                 } else if (ty < 0) {
                     this.toY = Math.max(this._toY + ty, limit.toY);
-                    this.fromY = this.toX - (_toY - _fromY);
+                    this.fromY = this.toY - (_toY - _fromY);
                 }
 
             } else {
@@ -4123,19 +4211,29 @@ this.PIXI.charts = this.PIXI.charts || {};
 
         /**
          * Compute transformation between this range and required
-         * @param source
          */
-         decomposeFrom (source) {
-            const t = {
-                sx: 1, sy: 1, tx: 0, ty: 0
-            };
+         decomposeFrom (source, transform, align = 'left') {
+            const t = transform || new Transform();
+            const sw = source.toX - source.fromX;
+            const sh = source.toY - source.fromY;
 
-            t.sx = (this.width / source.width) || 1;
-            t.sy = (this.height / source.height) || 1;
-            t.tx = this.fromX - source.fromX;
-            t.ty = this.fromY - source.fromY;
+            t.sx = (this.width / sw) || 1;
+            t.sy = (this.height / sh) || 1;
+
+            if (align === 'left') {
+                t.tx = (this.fromX - source.fromX);
+                t.ty = (this.fromY - source.fromY);
+            } else {
+                t.tx = -(this.toX - source.toX);
+                t.ty = -(this.toY - source.toY);
+            }
 
             return t;
+        }
+
+         transform(transform, limit) {
+            this.scale(transform.sx, transform.sy, limit);
+            this.translate(transform.tx, transform.ty, limit);
         }
 
         /**
@@ -4493,47 +4591,36 @@ this.PIXI.charts = this.PIXI.charts || {};
     	 * @inheritDoc
     	 */
     	processElements(result, source) {
-    		const {
-    			fromX, fromY, width, height
-    		} = this.context.chart.range;
-
+    	    const chart = this.context.chart;
     		const {
     		    fitYRange
-            } = this.context.chart.options.style;
+            } = chart.options.style;
 
     		const data = result.data;
 
     		let {
     		    fromX: limitLeft,
                 toX: limitRight
-            } = this.context.chart.limits;
+            } = chart.limits;
 
-    		const b = result.dataBounds;
-    		const dw = b.toX - b.fromX || 1;
-    		const dh = b.toY - b.fromY || 1;
+    		const b = chart.parent
+                ? chart.parent.dataProvider.sourceProvider.fetch().dataBounds
+                : source.dataBounds;
 
-    		const sx = width / dw;
-    		const sy = height / dh;
+
+            const t = chart.range.decomposeFrom(b);
     		const output = [];
-
-    		const transform = ({ x, y, ...other } ) => {
-    		    return {
-    		        ...other,
-                    x: fromX + (x - b.fromX) * sx,
-                    y: fromY + (y - b.fromY) * sy,
-                }
-            };
 
             const outBounds = new DataBounds();
             const trimmedBounds = new DataBounds();
 
             for (let i = 0; i < data.length; i ++) {
                 const input = data[i];
-    		    const current = transform(input);
+    		    const current = t.apply(input);
 
                 if (this.reduceXRange) {
                     if (current.x < limitRight && (i + 1) < data.length) {
-                        const next = transform(data[i + 1]);
+                        const next = t.apply(data[i + 1]);
 
                         if (next.x < limitLeft) {
                             continue;
@@ -4541,10 +4628,10 @@ this.PIXI.charts = this.PIXI.charts || {};
                     }
 
                     if (current.x > limitRight && i > 0) {
-                        const prev = transform(data[i - 1]);
+                        const prev = t.apply(data[i - 1]);
 
                         if (prev.x > limitRight) {
-                            continue;
+                            break;
                         }
                     }
                 }
@@ -4558,6 +4645,10 @@ this.PIXI.charts = this.PIXI.charts || {};
             }
 
             if (fitYRange) {
+                const {
+                    fromY, height
+                } = chart.range;
+
                 // rescale Y auto ranged
                 for (const out of output) {
                     out.y = (fromY + (out.y - outBounds.fromY) * height / (outBounds.toY - outBounds.fromY));
@@ -4567,9 +4658,8 @@ this.PIXI.charts = this.PIXI.charts || {};
                 outBounds.fromY = fromY;
             }
 
-
+            result.transform = t;
             result.data = output;
-
             result.dataBounds = outBounds;
     		result.trimmedSourceBounds = trimmedBounds;
 
@@ -6337,11 +6427,14 @@ gl_FragColor = color * uColor;
     	}
     }
 
+    //@ts-ignore
+
+
     const FIELDS = ['fill', 'stroke'];
 
     /**
      * Convert CSS style color onto array [r, g, b, a]
-     * @param {IChartStyle} style
+     * @param {ISeriesStyle} style
      */
     function parseStyle (style) {
         const parsed = {...style};
@@ -6351,7 +6444,13 @@ gl_FragColor = color * uColor;
             // default
             parsed[key] = [0,0,0,1];
 
-            if (orig == null) {
+            if (orig === void 0) {
+                continue;
+            }
+
+            if (orig === null || orig === 'none') {
+                // transparent for null
+                parsed[key] = [0,0,0,0];
                 continue;
             }
 
@@ -6412,13 +6511,15 @@ gl_FragColor = color * uColor;
 
     }
 
-    class LineDrawer extends BaseDrawer {constructor(...args) { super(...args); LineDrawer.prototype.__init.call(this);LineDrawer.prototype.__init2.call(this); }
+    class LineDrawer extends BaseDrawer {constructor(...args) { super(...args); LineDrawer.prototype.__init.call(this);LineDrawer.prototype.__init2.call(this);LineDrawer.prototype.__init3.call(this); }
           __init() {this.name = 'LineDrawer';}
           __init2() {this.node = new Plot(null);}
         
+         __init3() {this.alwaysUpdate = false;}
 
          init(context) {
             super.init(context);
+            this.alwaysUpdate = context.options.type === exports.CHART_TYPE.AREA;
 
             return (
                 context.options.type === exports.CHART_TYPE.AREA ||
@@ -6431,10 +6532,12 @@ gl_FragColor = color * uColor;
          * @param force - Update any case, no check a alpha === 0
          */
          update(force = false) {
+            force = force || this.alwaysUpdate;
+
             const node = this.node;
             const {
                 height
-            } = this.context.range;
+            } = this.context.limits;
 
             const {
                 dataProvider,
@@ -6449,12 +6552,12 @@ gl_FragColor = color * uColor;
 
             node.clear();
 
-            this.lastDrawedFetch = dataProvider.fetch();
+            this.lastDrawnFetch = dataProvider.fetch();
 
             const {
                 data,
                 dataBounds
-            } = this.lastDrawedFetch;
+            } = this.lastDrawnFetch;
 
             node.lineStyle(style.thickness || 2, void 0, style.lineJoint );
 
@@ -6521,6 +6624,9 @@ gl_FragColor = color * uColor;
                 );
             }
 
+            // we should suppress optimisation on this case
+            this._lineDrawer.alwaysUpdate = true;
+
             this.node.zIndex = this._lineDrawer.node.zIndex - 1;
             this.node.addChild(this._areaNode);
 
@@ -6544,7 +6650,7 @@ gl_FragColor = color * uColor;
             area.coordTop = 0;
 
             const viewport = this.context.limits;
-            const dataBounds = this._lineDrawer.lastDrawedFetch.dataBounds;
+            const dataBounds = this._lineDrawer.lastDrawnFetch.dataBounds;
 
             area.coordBottom = Math.max(viewport.height - dataBounds.fromY, viewport.height);
 
@@ -6693,13 +6799,12 @@ gl_FragColor = color * uColor;
              * try to use a source data and results for computing valid ticks
              */
             const data = [];
-            const fitY = this.context.chart.options.style.fitYRange;
-            const limits = this.context.chart.limits;
+            const chart = this.context.chart;
+            const fitY = chart.options.style.fitYRange;
+            const limits = chart.limits;
             const resultBounds = result.dataBounds;
-            const sourceBounds = source.dataBounds;
 
             // fitY? What will be when fitted result is shifted?
-            const scaleX = fitY ? limits.width : resultBounds.toX - resultBounds.fromX;
             let scaleY = fitY ? limits.height : resultBounds.toY - resultBounds.fromY;
 
             let minX = result.trimmedSourceBounds.fromX;
@@ -6728,15 +6833,11 @@ gl_FragColor = color * uColor;
                 const labelX = i < xLen ? x.toFixed(0) : null;
                 const labelY = i < yLen ? y.toFixed(0) : null;
 
-                x = (x - minX) / (maxX - minX);
-                y = (y - minY) / (maxY - minY);
-
-                x = x * scaleX + resultBounds.fromX;
-                y = y * limits.height;// resultBounds.fromY;
+                const out = result.transform.apply({x, y});
 
                 data.push({
-                    x: Math.round(x),
-                    y: Math.round(y),
+                    x: Math.round(out.x),
+                    y: Math.round(out.y),
                     labelX,
                     labelY
                 });
@@ -6753,6 +6854,11 @@ gl_FragColor = color * uColor;
          __init2() {this.node = new graphics.Graphics();}
 
         init(context) {
+            // supress grid drawer when parent has parent, their grid will be used.
+            if (context.parent) {
+                return false;
+            }
+
             this.node.zIndex = -100;
 
             return super.init(context);
@@ -6784,6 +6890,42 @@ gl_FragColor = color * uColor;
             return true;
         }
     }
+
+    exports.LABEL_LOCATION = void 0; (function (LABEL_LOCATION) {
+    	const NONE = 'none'; LABEL_LOCATION["NONE"] = NONE;
+    	const TOP = 'top'; LABEL_LOCATION["TOP"] = TOP;
+    	const BOTTOM = 'bottom'; LABEL_LOCATION["BOTTOM"] = BOTTOM;
+    	const LEFT = 'left'; LABEL_LOCATION["LEFT"] = LEFT;
+    	const RIGHT = 'right'; LABEL_LOCATION["RIGHT"] = RIGHT;
+    })(exports.LABEL_LOCATION || (exports.LABEL_LOCATION = {}));
+
+    const DEFAULT_LABELS_STYLE = {
+    	x: {
+    		position: exports.LABEL_LOCATION.BOTTOM,
+    	},
+    	y: {
+    		position: exports.LABEL_LOCATION.LEFT
+    	}
+    };
+
+    const DEFAULT_LABELS_STYLE_PARENT = {
+        x: {
+            position: exports.LABEL_LOCATION.NONE,
+        },
+        y: {
+            position: exports.LABEL_LOCATION.RIGHT
+        }
+    };
+
+    const DEFAULT_STYLE = {
+    	fill: 0x0,
+    	stroke: 0x0,
+    	thickness: 2,
+    	lineJoint: graphics.LINE_JOIN.BEVEL,
+    	labels: DEFAULT_LABELS_STYLE,
+    	clamp: true,
+    	fitYRange: false,
+    };
 
     const LABEL_TICKS_THICKNESS = 1;
     const LABEL_TICS = 5;
@@ -6890,6 +7032,10 @@ gl_FragColor = color * uColor;
                 x, y
             } = context.options.style.labels;
 
+            if (context.parent) {
+                //return false;
+            }
+
             return (
                 super.init(context) ||
                 x.position === exports.LABEL_LOCATION.NONE ||
@@ -6897,7 +7043,7 @@ gl_FragColor = color * uColor;
             );
         }
 
-         _updateXAxis(data) {
+         _updateYAxis(data) {
             const {
                 limits, options
             } = this.context;
@@ -6933,7 +7079,7 @@ gl_FragColor = color * uColor;
             this._yTicks.y = 0;
         }
 
-         _updateYAxis(data) {
+         _updateXAxis(data) {
             const {
                 limits, options
             } = this.context;
@@ -6971,15 +7117,6 @@ gl_FragColor = color * uColor;
 
 
          update() {
-            const node = this.node;
-
-            /*
-            node.clear();
-            node
-                .beginFill(0xffffff)
-                .lineStyle({width: LABEL_TICKS_THICKNESS, color: 0})
-            */
-
             this.context.dataProvider.use(this._fancyPlugin);
             const data = this.context.dataProvider.fetch();
 
@@ -6998,57 +7135,6 @@ gl_FragColor = color * uColor;
             this._yTicks && this._yTicks.dispose();
         }
     }
-
-    exports.LABEL_LOCATION = void 0; (function (LABEL_LOCATION) {
-        const NONE = 'none'; LABEL_LOCATION["NONE"] = NONE;
-        const TOP = 'top'; LABEL_LOCATION["TOP"] = TOP;
-        const BOTTOM = 'bottom'; LABEL_LOCATION["BOTTOM"] = BOTTOM;
-        const LEFT = 'left'; LABEL_LOCATION["LEFT"] = LEFT;
-        const RIGHT = 'right'; LABEL_LOCATION["RIGHT"] = RIGHT;
-    })(exports.LABEL_LOCATION || (exports.LABEL_LOCATION = {}));
-
-    const DEFAUTL_LABELS_STYLE = {
-        x: {
-            position: exports.LABEL_LOCATION.BOTTOM,
-        },
-        y: {
-            position: exports.LABEL_LOCATION.LEFT
-        }
-    };
-
-    const DEFAULT_STYLE = {
-        fill: 0x0,
-        stroke: 0x0,
-        thickness: 2,
-        lineJoint: graphics.LINE_JOIN.BEVEL,
-        labels: DEFAUTL_LABELS_STYLE,
-        clamp: true,
-        fitYRange: false,
-    };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     function isValidEnum(prop, enumType) {
         if (!prop) {
@@ -7074,10 +7160,17 @@ gl_FragColor = color * uColor;
         const joint = result.style.lineJoint;
         result.style.lineJoint = isValidEnum(joint, graphics.LINE_JOIN) ? joint : graphics.LINE_JOIN.BEVEL;
 
-        result.style.labels = {
-            x: {...DEFAUTL_LABELS_STYLE.x }, y: {...DEFAUTL_LABELS_STYLE.y },
-            ...((options.style || {}).labels || {})
-        };
+        if (options.parent) {
+            result.style.labels = {
+                x: {...DEFAULT_LABELS_STYLE_PARENT.x}, y: {...DEFAULT_LABELS_STYLE_PARENT.y},
+                ...((options.style || {}).labels || {})
+            };
+        } else {
+            result.style.labels = {
+                x: {...DEFAULT_LABELS_STYLE.x}, y: {...DEFAULT_LABELS_STYLE.y},
+                ...((options.style || {}).labels || {})
+            };
+        }
 
         return result;
     }
@@ -7085,7 +7178,7 @@ gl_FragColor = color * uColor;
     /**
      * Root chart class that used for drawing a any kind of charts
      */
-    class Chart extends display.Container {
+    class Series extends utils.EventEmitter {
          static __initStatic() {this.plugins = [];}
 
         /**
@@ -7102,29 +7195,56 @@ gl_FragColor = color * uColor;
             return true;
         }
 
+          __init() {this.node = new display.Container();}
+
+          __init2() {this._plugins = [];}
+          __init3() {this._activePlugins = [];}
+          __init4() {this._range = new Range();}
+          __init5() {this._localTransform = new Transform();}
+          __init6() {this._worldTransform = new Transform();}
+
+         get transform() {
+            if (this.parent) {
+                this._worldTransform.set(this.parent.transform);
+                this._worldTransform.mul(this._localTransform);
+            } else {
+                this._worldTransform.set(this._localTransform);
+            }
+
+            return this._worldTransform;
+        }
+
+          __init7() {this.limits = new Range();}
+
         /**
          * Chart name
          */
-         __init() {this.name = '';}
+         __init8() {this.name = '';}
 
         /**
          * Input service that attached on current chart
          */
         
-
-          __init2() {this.range = new Range();}
-          __init3() {this.limits = new Range();}
-
+        /**
+         * Current Chart context for bounded Series
+         */
         
 
         
+
         
 
-          __init4() {this._plugins = [];}
-          __init5() {this._activePlugins = [];}
+         get range() {
+            this._range.set(this.limits);
+            this._range.transform(this.transform);
 
-         __init6() {this._updateId = -1;}
-         __init7() {this._drawId = -1;}
+            return this._range;
+        }
+
+        
+        
+         __init9() {this._updateId = -1;}
+         __init10() {this._drawId = -1;}
 
          get updateId() {
             return this._updateId;
@@ -7134,33 +7254,67 @@ gl_FragColor = color * uColor;
             return this._drawId;
         }
 
+
         /**
          * Instance a Chart with provided data, chart data should be immutable
          * Handle the drawers that will be used for current Chart instances.
-         * @param { IChartDataOptions } options
+         * @param { ISeriesDataOptions } options
          * @param { IDrawerPlugin[] } plugins Drawers object that can be used in current chart
          */
         constructor (
               options,
             plugins = [],
         ) {
-            super();this.options = options;Chart.prototype.__init.call(this);Chart.prototype.__init2.call(this);Chart.prototype.__init3.call(this);Chart.prototype.__init4.call(this);Chart.prototype.__init5.call(this);Chart.prototype.__init6.call(this);Chart.prototype.__init7.call(this);;
+            super();this.options = options;Series.prototype.__init.call(this);Series.prototype.__init2.call(this);Series.prototype.__init3.call(this);Series.prototype.__init4.call(this);Series.prototype.__init5.call(this);Series.prototype.__init6.call(this);Series.prototype.__init7.call(this);Series.prototype.__init8.call(this);Series.prototype.__init9.call(this);Series.prototype.__init10.call(this);;
 
+            this.name = options.name;
             this.onRangeChanged = this.onRangeChanged.bind(this);
+            this.onWheel = this.onWheel.bind(this);
 
             this.options = validate(options);
-            this.range.on(Observable.CHANGE_EVENT, this.onRangeChanged);
-
-            this.interactive = true;
-            this.interactiveChildren = false;
 
             this.preparePlugins(plugins);
+        }
 
-            this.on('pointermove', this.onDrag);
-            document.addEventListener('wheel', this.onWheel.bind(this));
+         bind (context, parent = null) {
+            this.parent = parent;
+            this.context = context;
+            this.input = context.input;
 
-            // first init
+            this._localTransform.on(Transform.CHANGE, this.onRangeChanged);
+
+            if (this.parent) {
+                this.parent.transform.on(Transform.CHANGE, this.onRangeChanged);
+            }
+
+            this.node.interactive = true;
+            this.node.interactiveChildren = false;
+
+            // TODO
+            // Rebound onto input
+            this.node.on('pointermove', this.onDrag, this);
+            document.addEventListener('wheel', this.onWheel);
+
             this.init();
+        }
+
+         unbind (context) {
+            this._localTransform.off(Transform.CHANGE, this.onRangeChanged);
+            if (this.parent) {
+                this.parent.transform.off(Transform.CHANGE, this.onRangeChanged);
+            }
+
+            this.node.interactive = false;
+            this.node.interactiveChildren = false;
+
+            // TODO
+            // Rebound onto input
+            this.node.off('pointermove', this.onDrag, this);
+            document.removeEventListener('wheel', this.onWheel);
+
+            this.context = null;
+            this.input = null;
+            this.parent = null;
         }
 
          preparePlugins (externalPlugins) {
@@ -7168,7 +7322,7 @@ gl_FragColor = color * uColor;
 
             const pluginName = new Set();
 
-            for (const Ctor of Chart.plugins) {
+            for (const Ctor of Series.plugins) {
                 const instance = new Ctor();
 
                 if (!instance.name || pluginName.has(instance.name)) {
@@ -7194,6 +7348,7 @@ gl_FragColor = color * uColor;
             this.parse();
 
             this._activePlugins.length = 0;
+            this.node.removeChildren();
 
             for (const plugin of this._plugins) {
                 if (!plugin.init(this)) {
@@ -7203,11 +7358,11 @@ gl_FragColor = color * uColor;
                 this._activePlugins.push(plugin);
 
                 if (plugin.node) {
-                    this.addChild(plugin.node);
+                    this.node.addChild(plugin.node);
                 }
             }
 
-            this.sortChildren();
+            this.node.sortChildren();
         }
 
          update() {
@@ -7245,14 +7400,14 @@ gl_FragColor = color * uColor;
             }
 
             // remove all childs
-            this.removeChildren();
+            this.node.removeChildren();
             this._activePlugins.length = 0;
 
             this._drawId = this._updateId = -1;
         }
 
          destroy(_options) {
-            super.destroy(_options);
+            this.node.destroy(_options);
 
             this.reset();
 
@@ -7266,16 +7421,19 @@ gl_FragColor = color * uColor;
         }
 
          scaleAtPoint (point, sx, sy) {
-            this.range.suspended = true;
+            const clamp = this.options.style.clamp;
 
-            this.range.translate(-point.x, -point.y);
-            this.range.scale(sx, sy);
-            this.range.translate(point.x, point.y);
+            this._localTransform.translate(-point.x, -point.y);
+            this._localTransform.scale(sx, sy);
+            this._localTransform.translate(point.x, point.y);
 
-            if (this.options.style.clamp) {
-                this.range.clampToMin(this.limits);
+            if (clamp) {
+                this._range.set(this.limits);
+                this._range.transform(this._localTransform, this.limits);
+                this._range.decomposeFrom(this.limits, this._localTransform);
             }
-            this.range.suspended = false;
+
+            this._emitUpdate();
         }
 
          transformRange({
@@ -7285,15 +7443,23 @@ gl_FragColor = color * uColor;
                 clamp
             } = this.options.style;
 
-            this.range.suspended = true;
+            this._localTransform.translate(tx, ty);
+            this._localTransform.scale(sx, sy);
 
-            this.range.translate(tx, ty, clamp ?  this.limits : null);
-            this.range.scale(sx, sy, clamp ? this.limits : null);
+            if (clamp) {
+                this._range.set(this.limits);
+                this._range.transform(this._localTransform, this.limits);
+                this._range.decomposeFrom(this.limits, this._localTransform);
+            }
 
-            this.range.suspended = false;
+            this._emitUpdate();
         }
 
          onWheel(event) {
+            if (this.parent) {
+                return;
+            }
+
             if (!this._lastMousePoint) {
                 return;
             }
@@ -7316,6 +7482,10 @@ gl_FragColor = color * uColor;
         }
 
          onDrag(event) {
+            if (this.parent) {
+                return;
+            }
+
             const pos = event.data.global;
             this._lastMousePoint = pos.clone();
 
@@ -7395,12 +7565,20 @@ gl_FragColor = color * uColor;
         }
 
          setViewport (x, y, width, height) {
-            this.hitArea = new math.Rectangle(x, y, width, height);
+            this.node.hitArea = new math.Rectangle(x, y, width, height);
+
+            if (!this.parent) {
+                this._range.set(this.limits);
+            }
+
             this.limits.set({
                 fromX: x, fromY: y, toX: x + width, toY: y + height
             });
 
-            this.range.clampToMin(this.limits);
+            if (!this.parent) {
+                this._range.clampToMin(this.limits);
+                this._range.decomposeFrom(this.limits, this._localTransform, 'right');
+            }
 
             this.emit(exports.CHART_EVENTS.RESIZE, this);
             this._emitUpdate();
@@ -7418,16 +7596,16 @@ gl_FragColor = color * uColor;
             this._updateId ++;
             this.emit(exports.CHART_EVENTS.UPDATE, this);
         }
-    } Chart.__initStatic();
+    } Series.__initStatic();
 
     // Register Data plugins
     PluggableProvider.registerPlugin(DataTransformPlugin);
 
     // register a Chart drawer plugin
-    Chart.registerPlugin(GridDrawer);
-    Chart.registerPlugin(LineDrawer);
-    Chart.registerPlugin(AreaDrawer);
-    Chart.registerPlugin(LabelsDrawer);
+    Series.registerPlugin(GridDrawer);
+    Series.registerPlugin(LineDrawer);
+    Series.registerPlugin(AreaDrawer);
+    Series.registerPlugin(LabelsDrawer);
 
     /**
      * Data plugin interface, used for transforming a passed data
@@ -7555,11 +7733,12 @@ gl_FragColor = color * uColor;
     core.Renderer.registerPlugin('batch', core.BatchRenderer);
     core.Renderer.registerPlugin('interaction', InteractionManager);
 
-    class ChartApp {
-         __init() {this.ticker = new Ticker();}
+    class Chart {
+         __init() {this.series = new Set();}
+         __init2() {this.ticker = new Ticker();}
         
-         __init2() {this.stage = new display.Container();}
-         __init3() {this.size
+         __init3() {this.stage = new display.Container();}
+         __init4() {this.size
 
 
      = {
@@ -7568,7 +7747,7 @@ gl_FragColor = color * uColor;
 
         
 
-        constructor(canvasOrId) {;ChartApp.prototype.__init.call(this);ChartApp.prototype.__init2.call(this);ChartApp.prototype.__init3.call(this);
+        constructor(canvasOrId) {;Chart.prototype.__init.call(this);Chart.prototype.__init2.call(this);Chart.prototype.__init3.call(this);Chart.prototype.__init4.call(this);Chart.prototype.__init5.call(this);Chart.prototype.__init6.call(this);
             const view = canvasOrId instanceof HTMLCanvasElement
                     ? canvasOrId
                     : document.querySelector(canvasOrId);
@@ -7586,16 +7765,17 @@ gl_FragColor = color * uColor;
 
             this.update = this.update.bind(this);
             this.draw = this.draw.bind(this);
+            this.onDimensionUpdateLazy = this.onDimensionUpdateLazy.bind(this);
             this.onDimensionUpdate = this.onDimensionUpdate.bind(this);
-            this.onChartUpdate = this.onChartUpdate.bind(this);
-            this.removeChart = this.removeChart.bind(this);
+            this.onSeriesUpdate = this.onSeriesUpdate.bind(this);
+            this.removeSeries = this.removeSeries.bind(this);
 
             this.input = new PixiInput(this.renderer.plugins.interaction);
 
             //@ts-ignore
             if (self.ResizeObserver) {
                 //@ts-ignore
-                new self.ResizeObserver(this.onDimensionUpdate).observe(view);
+                new self.ResizeObserver(this.onDimensionUpdateLazy).observe(view);
             }
 
             this.ticker.add(this.update);
@@ -7604,7 +7784,20 @@ gl_FragColor = color * uColor;
             this.ticker.start();
         }
 
+         __init5() {this.timeout = -1;}
+         __init6() {this.onResizeProcess = false;}
+
+         onDimensionUpdateLazy() {
+            self.clearTimeout(this.timeout);
+            this.onResizeProcess = true;
+            this.timeout = self.setTimeout(this.onDimensionUpdate, 100);
+        }
+
          onDimensionUpdate () {
+            self.clearTimeout(this.timeout);
+            this.onResizeProcess = false;
+            this.timeout = -1;
+
             const view = this.renderer.view;
             this.size.width = view.clientWidth * window.devicePixelRatio;
             this.size.height = view.clientHeight * window.devicePixelRatio;
@@ -7614,51 +7807,164 @@ gl_FragColor = color * uColor;
                 this.size.height
             );
 
-            this.stage.children
-                .forEach(e => ( e).setViewport(0,0, this.size.width, this.size.height) );
+            this.series
+                .forEach(e => e.setViewport(0,0, this.size.width, this.size.height) );
         }
 
-         onChartUpdate(chart) {
+         onSeriesUpdate(chart) {
             // nothing
             // this.draw();
         }
 
-         addChart(chart, name = 'chart_' + this.stage.children.length) {
-            if (this.stage.children.includes(chart)) {
-                return  chart;
+        /**
+         * Add chart series based on data objects passed as argument
+         * @param data
+         * @param nested - Series data will linked on latest added (or first if there are not) to follow transforming
+         */
+         add ( data, nested = false) {
+            // process Array of series options
+            if (Array.isArray(data)) {
+                for (const subdata of data) {
+                    this.add(subdata);
+                }
+                return this;
             }
 
-            chart.name = name;
-            chart.setViewport(0,0, this.size.width, this.size.height);
+            let parent;
+            if (data.parent instanceof Series) {
+                parent = data.parent;
 
-            this._bindEvents(chart);
+                if (!this.series.has(data.parent)) {
+                    console.warn('Series parent must be attached to same Chart');
+                    parent = null;
+                }
+            } else if (typeof data.parent === "string" && data.parent) {
+                parent = this.getByName(data.parent);
 
-            this.stage.addChild(chart);
+                if (!parent) {
+                    console.warn(`Parent by name:${data.parent} wasn't find`);
+                }
+            }
 
-            return chart;
+            if (!parent && nested) {
+                parent = this.tall;
+            }
+
+            if (data instanceof Series) {
+                this.addSeries(data);
+                return;
+            }
+
+            // process multi series data
+            if ('datasets' in data && Array.isArray(data.datasets)) {
+                // process Array of series options
+                for (let i = 0; i < data.datasets.length; i ++) {
+                    const style = data.styles ? data.styles[Math.min(i, data.styles.length - 1)] : void 0;
+                    const name = `${data.name || ('series_' + this.stage.children.length)}:${i}`;
+                    const series = new Series(
+                        {
+                            name: name,
+                            type: data.type,
+                            parent: parent,
+                            data: data.datasets[i],
+                            style: style,
+                        } 
+                    );
+
+                    // use first chart as parent for others
+                    if (i === 0 && !parent) {
+                        parent = series;
+                    }
+
+                    this.addSeries(series);
+                }
+
+                return this;
+            }
+
+            data.parent = parent;
+
+            this.addSeries(new Series(data ));
+
+            return  this;
         }
 
-         removeChart(name) {
-            const chart = this.stage.children.find( (e) => e.name === name) ;
-
-            if (chart) {
-                this._unbindEvents(chart);
-                this.stage.removeChild(chart);
+         getByName(name) {
+            for (const s of  this.series) {
+                if (s.name === name) {
+                    return s;
+                }
             }
 
-            return chart;
+            return null;
+        }
+
+         get tall() {
+            return [...this.series].pop();
+        }
+
+         addSeries(series, name = 'series_' + this.stage.children.length) {
+            if (this.series.has(series)) {
+                return  series;
+            }
+
+            // resolve parent;
+            this.series.add(series);
+
+            series.name = series.name || name;
+            series.setViewport(0,0, this.size.width, this.size.height);
+
+            this._bindEvents(series);
+
+            let parent = series.options.parent;
+
+            if (typeof parent === 'string') {
+                parent = this.getByName(parent);
+            }else if (parent instanceof Series && !this.series.has(parent)) {
+                parent = null;
+            }
+
+            series.bind(this, parent );
+
+            this.stage.addChild(series.node);
+
+            return series;
+        }
+
+         removeSeries(name) {
+            const series = this.getByName(name);
+            if (!series) {
+                return ;
+            }
+
+            this._unbindEvents(series);
+            this.series.delete(series);
+
+            series.unbind(this);
+
+            for (let other of this.series) {
+                if (other.parent === series) {
+                    console.warn(`Parent series for ${other.name} was removed`);
+                    other.unbind(this);
+                    other.bind(this, null);
+                }
+            }
+
+            this.stage.removeChild(series.node);
+
+            return series;
         }
 
          _unbindEvents (chart) {
             this.input.unregister(chart);
 
-            chart.off(exports.CHART_EVENTS.UPDATE, this.onChartUpdate);
-            chart.off(exports.CHART_EVENTS.DESTROY, this.removeChart);
+            chart.off(exports.CHART_EVENTS.UPDATE, this.onSeriesUpdate);
+            chart.off(exports.CHART_EVENTS.DESTROY, this.removeSeries);
         }
 
          _bindEvents (chart) {
-            chart.on(exports.CHART_EVENTS.UPDATE, this.onChartUpdate);
-            chart.on(exports.CHART_EVENTS.DESTROY, this.removeChart);
+            chart.on(exports.CHART_EVENTS.UPDATE, this.onSeriesUpdate);
+            chart.on(exports.CHART_EVENTS.DESTROY, this.removeSeries);
 
             this.input.register(chart);
         }
@@ -7666,21 +7972,25 @@ gl_FragColor = color * uColor;
          update() {
             this.input.update(this.ticker.elapsedMS);
 
-            for (const chart of this.stage.children) {
-                ( chart).update();
+            for (const series of this.series) {
+                series.update();
             }
         }
 
          draw() {
-            let dirtyCharts = 0;
+            if (this.onResizeProcess) {
+                return;
+            }
 
-            for (const chart of this.stage.children) {
-                if(( chart).draw()) {
-                    dirtyCharts ++;
+            let dirtySeries = 0;
+
+            for (const series of this.series) {
+                if(series.draw()) {
+                    dirtySeries ++;
                 }
             }
 
-            if (dirtyCharts !== 0) {
+            if (dirtySeries !== 0) {
                 this.renderer.render(this.stage);
             }
         }
@@ -7698,12 +8008,15 @@ gl_FragColor = color * uColor;
     exports.ArrayLikeDataProvider = ArrayLikeDataProvider;
     exports.BaseDrawer = BaseDrawer;
     exports.Chart = Chart;
-    exports.ChartApp = ChartApp;
+    exports.DEFAULT_LABELS_STYLE = DEFAULT_LABELS_STYLE;
+    exports.DEFAULT_LABELS_STYLE_PARENT = DEFAULT_LABELS_STYLE_PARENT;
+    exports.DEFAULT_STYLE = DEFAULT_STYLE;
     exports.DataTransformPlugin = DataTransformPlugin;
     exports.ObjectDataProvider = ObjectDataProvider;
     exports.Observable = Observable;
     exports.PluggableProvider = PluggableProvider;
     exports.Range = Range;
+    exports.Series = Series;
     exports.parseStyle = parseStyle;
 
     Object.defineProperty(exports, '__esModule', { value: true });
