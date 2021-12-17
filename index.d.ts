@@ -32,7 +32,7 @@ export declare class BaseDrawer implements IDrawerPlugin {
     protected getParsedStyle(): ISeriesStyle;
 }
 
-declare abstract class BaseInput extends EventEmitter {
+export declare abstract class BaseInput extends EventEmitter {
     abstract register(chart: Series): void;
     abstract unregister(chart: Series): void;
     abstract update(deltaTime: number): void;
@@ -85,7 +85,7 @@ export declare class DataTransformPlugin implements IDataPlugin {
     processElements(result: DataTransformPluginResult, source: IDataFetchResult<IObjectData>): DataTransformPluginResult;
 }
 
-declare type DataTransformPluginResult = IDataFetchResult<IObjectData> & {
+export declare type DataTransformPluginResult = IDataFetchResult<IObjectData> & {
     trimmedSourceBounds?: IRangeObject;
     transform?: Transform;
 };
@@ -211,7 +211,7 @@ export declare interface ISeriesStyle {
     fitYRange: boolean;
 }
 
-declare interface ITransorm {
+export declare interface ITransorm {
     tx: number;
     ty: number;
     sx: number;
@@ -245,7 +245,7 @@ export declare class Observable<T> extends EventEmitter {
 
 export declare function parseStyle(style: ISeriesStyle): ISeriesStyle;
 
-declare class PixiInput extends BaseInput {
+export declare class PixiInput extends BaseInput {
     readonly provider: InteractionManager;
     private _charts;
     private _eventsRegistered;
@@ -344,7 +344,7 @@ export declare class Series extends EventEmitter {
     private _emitUpdate;
 }
 
-declare class Transform extends EventEmitter implements ITransorm {
+export declare class Transform extends EventEmitter implements ITransorm {
     static readonly CHANGE = "CHANGE";
     tx: number;
     ty: number;

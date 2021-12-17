@@ -1,8 +1,8 @@
 /* eslint-disable */
  
 /*!
- * @pixi/charts - v0.2.2
- * Compiled Fri, 08 Oct 2021 11:06:39 UTC
+ * @pixi/charts - v0.2.3
+ * Compiled Fri, 17 Dec 2021 10:53:41 UTC
  *
  * @pixi/charts is licensed under the MIT License.
  * http://www.opensource.org/licenses/mit-license
@@ -148,8 +148,8 @@ function isMobile$1(param) {
 }
 
 /*!
- * @pixi/settings - v6.1.2
- * Compiled Thu, 12 Aug 2021 17:11:19 UTC
+ * @pixi/settings - v6.1.3
+ * Compiled Mon, 13 Sep 2021 15:29:31 UTC
  *
  * @pixi/settings is licensed under the MIT License.
  * http://www.opensource.org/licenses/mit-license
@@ -211,8 +211,8 @@ function canUploadSameBuffer() {
 }
 
 /*!
- * @pixi/constants - v6.1.2
- * Compiled Thu, 12 Aug 2021 17:11:19 UTC
+ * @pixi/constants - v6.1.3
+ * Compiled Mon, 13 Sep 2021 15:29:31 UTC
  *
  * @pixi/constants is licensed under the MIT License.
  * http://www.opensource.org/licenses/mit-license
@@ -951,8 +951,8 @@ var settings = {
 };
 
 /*!
- * @pixi/ticker - v6.1.2
- * Compiled Thu, 12 Aug 2021 17:11:19 UTC
+ * @pixi/ticker - v6.1.3
+ * Compiled Mon, 13 Sep 2021 15:29:31 UTC
  *
  * @pixi/ticker is licensed under the MIT License.
  * http://www.opensource.org/licenses/mit-license
@@ -1593,8 +1593,8 @@ var Ticker = /** @class */ (function () {
 }());
 
 /*!
- * @pixi/interaction - v6.1.2
- * Compiled Thu, 12 Aug 2021 17:11:19 UTC
+ * @pixi/interaction - v6.1.3
+ * Compiled Mon, 13 Sep 2021 15:29:31 UTC
  *
  * @pixi/interaction is licensed under the MIT License.
  * http://www.opensource.org/licenses/mit-license
@@ -3831,89 +3831,132 @@ var InteractionManager = /** @class */ (function (_super) {
     return InteractionManager;
 }(utils.EventEmitter));
 
-class Observable extends utils.EventEmitter {
-     static __initStatic() {this.CHANGE_EVENT = 'change';}
-     __init() {this._dirtyId = 0;}
-
-    constructor (fields) {
-        super();Observable.prototype.__init.call(this);Observable.prototype.__init2.call(this);Observable.prototype.__init3.call(this);
-        if (fields) {
-            this.wrap(fields, this);
-        }
-    }
-
-
-     _broadcast (name, oldValue, newValue) {
-        if (this._suspended) {
-            return;
-        }
-
-        this.emit(Observable.CHANGE_EVENT, {
-            target: this,
-            name,
-            oldValue,
-            newValue
-        });
-    }
-
-     __init2() {this._suspended = false;}
-     __init3() {this._dirtyBeforeSuspend = 0;}
-
+/**
+ * BaseInput class that provide a interface for subclasses that handle input for Charts
+ */
+class BaseInput extends utils.EventEmitter {
     /**
-     * Suspend and not emit change events while suspended
-     * @protected
+     * Should be called when input a registered for specific chart
+     * Can be invoked a more times for multichart apps
      */
-     set suspended(v) {
-        if (v === this._suspended) {
-            return;
-        }
+    
 
-        if (v) {
-            this._dirtyBeforeSuspend = this._dirtyId;
-            this._suspended = true;
+
+
+
+
+
+
+
+
+
+
+
+}
+
+class PixiInput extends BaseInput {
+	 __init() {this._charts = new Set();}
+	 __init2() {this._eventsRegistered = false;}
+
+	constructor(
+		  provider
+	) {
+		super();this.provider = provider;PixiInput.prototype.__init.call(this);PixiInput.prototype.__init2.call(this);
+		this._onPointerUp = this._onPointerUp.bind(this);
+		this._onPointerDown = this._onPointerDown.bind(this);
+		this._onPointerMove = this._onPointerDown.bind(this);
+		this._onPointerTap = this._onPointerTap.bind(this);
+
+		this._onWheel = this._onWheel.bind(this);
+	}
+
+	 _attachEvents() {
+		if (this._eventsRegistered) {
+			return;
+		}
+
+		const p = this.provider;
+
+		p.on('pointerup', this._onPointerUp, this);
+		p.on('pointerupoutside', this._onPointerUp, this);
+        p.on('pointerdown', this._onPointerDown, this);
+        p.on('pointermove', this._onPointerMove, this);
+        p.on('pointertap', this._onPointerTap, this);
+
+        // handle native wheel
+
+        if ((p ).interactionDOMElement) {
+            (p ).interactionDOMElement.addEventListener('wheel', this._onWheel, {passive: false});
         } else {
-            this._suspended = false;
-
-            if (this._dirtyId !== this._dirtyBeforeSuspend) {
-                this._broadcast();
-            }
-
-            this._dirtyBeforeSuspend = -1;
-        }
-    }
-
-     get suspended () {
-        return this._suspended;
-    }
-
-     dirtyId () {
-        return this._dirtyId;
-    }
-
-     wrap  (fields, target) {
-        target = target ;
-
-        for (const key of fields) {
-            Object.defineProperty(target, key, {
-                set (v) {
-                    const old = this['_' + key];
-                    this['_' + key] = v;
-
-                    if (old !== v) {
-                        target._dirtyId ++;
-                        target._broadcast (key, old, v);
-                    }
-                },
-
-                get () {
-                    return this['_' + key];
-                }
-            });
+            document.addEventListener('wheel', this._onWheel, {passive: false});
         }
 
-        return target;
+        this._eventsRegistered = true;
+	}
+
+	 _onWheel (event) {
+	    event.preventDefault();
     }
-} Observable.__initStatic();
+
+	 _onPointerTap (event) {
+
+    }
+
+	 _onPointerMove (event) {
+
+    }
+
+	 _onPointerUp (event) {
+
+    }
+
+     _onPointerDown (event) {
+
+    }
+
+	 _detachEvents() {
+		if (!this._eventsRegistered) {
+			return;
+		}
+
+        const p = this.provider;
+
+        p.off('pointerup', this._onPointerUp, this);
+        p.off('pointerupoutside', this._onPointerUp, this);
+        p.off('pointerdown', this._onPointerDown, this);
+        p.off('pointermove', this._onPointerMove, this);
+        p.off('pointertap', this._onPointerTap, this);
+
+        // unlink
+        if ((p ).interactionDOMElement) {
+            (p ).interactionDOMElement.removeEventListener('wheel', this._onWheel);
+        } else {
+            document.removeEventListener('wheel', this._onWheel);
+        }
+
+		this._eventsRegistered = false;
+	}
+
+	 register(chart) {
+		if (this._charts.has(chart))
+			return;
+
+		this._charts.add(chart);
+		this._attachEvents();
+	}
+
+	 unregister(chart) {
+		this._charts.delete(chart);
+
+		if (this._charts.size === 0) {
+			this._detachEvents();
+		}
+	}
+
+	 update(deltaTime) {
+
+    }
+}
 
 class Transform extends utils.EventEmitter  {constructor(...args) { super(...args); Transform.prototype.__init.call(this);Transform.prototype.__init2.call(this);Transform.prototype.__init3.call(this);Transform.prototype.__init4.call(this); }
      static  __initStatic() {this.CHANGE = 'CHANGE';}
@@ -4002,6 +4045,90 @@ class Transform extends utils.EventEmitter  {constructor(...args) { super(...arg
         this.emit(Transform.CHANGE, this);
     }
 } Transform.__initStatic();
+
+class Observable extends utils.EventEmitter {
+     static __initStatic() {this.CHANGE_EVENT = 'change';}
+     __init() {this._dirtyId = 0;}
+
+    constructor (fields) {
+        super();Observable.prototype.__init.call(this);Observable.prototype.__init2.call(this);Observable.prototype.__init3.call(this);
+        if (fields) {
+            this.wrap(fields, this);
+        }
+    }
+
+
+     _broadcast (name, oldValue, newValue) {
+        if (this._suspended) {
+            return;
+        }
+
+        this.emit(Observable.CHANGE_EVENT, {
+            target: this,
+            name,
+            oldValue,
+            newValue
+        });
+    }
+
+     __init2() {this._suspended = false;}
+     __init3() {this._dirtyBeforeSuspend = 0;}
+
+    /**
+     * Suspend and not emit change events while suspended
+     * @protected
+     */
+     set suspended(v) {
+        if (v === this._suspended) {
+            return;
+        }
+
+        if (v) {
+            this._dirtyBeforeSuspend = this._dirtyId;
+            this._suspended = true;
+        } else {
+            this._suspended = false;
+
+            if (this._dirtyId !== this._dirtyBeforeSuspend) {
+                this._broadcast();
+            }
+
+            this._dirtyBeforeSuspend = -1;
+        }
+    }
+
+     get suspended () {
+        return this._suspended;
+    }
+
+     dirtyId () {
+        return this._dirtyId;
+    }
+
+     wrap  (fields, target) {
+        target = target ;
+
+        for (const key of fields) {
+            Object.defineProperty(target, key, {
+                set (v) {
+                    const old = this['_' + key];
+                    this['_' + key] = v;
+
+                    if (old !== v) {
+                        target._dirtyId ++;
+                        target._broadcast (key, old, v);
+                    }
+                },
+
+                get () {
+                    return this['_' + key];
+                }
+            });
+        }
+
+        return target;
+    }
+} Observable.__initStatic();
 
 class Range extends Observable {
      __init() {this._fromX = 0;}
@@ -7276,124 +7403,6 @@ Series.registerPlugin(LineDrawer);
 Series.registerPlugin(AreaDrawer);
 Series.registerPlugin(LabelsDrawer);
 
-/**
- * BaseInput class that provide a interface for subclasses that handle input for Charts
- */
-class BaseInput extends utils.EventEmitter {
-    /**
-     * Should be called when input a registered for specific chart
-     * Can be invoked a more times for multichart apps
-     */
-    
-
-
-
-
-
-
-
-
-
-
-
-
-}
-
-class PixiInput extends BaseInput {
-	 __init() {this._charts = new Set();}
-	 __init2() {this._eventsRegistered = false;}
-
-	constructor(
-		  provider
-	) {
-		super();this.provider = provider;PixiInput.prototype.__init.call(this);PixiInput.prototype.__init2.call(this);
-		this._onPointerUp = this._onPointerUp.bind(this);
-		this._onPointerDown = this._onPointerDown.bind(this);
-		this._onPointerMove = this._onPointerDown.bind(this);
-		this._onPointerTap = this._onPointerTap.bind(this);
-
-		this._onWheel = this._onWheel.bind(this);
-	}
-
-	 _attachEvents() {
-		if (this._eventsRegistered) {
-			return;
-		}
-
-		const p = this.provider;
-
-		p.on('pointerup', this._onPointerUp, this);
-		p.on('pointerupoutside', this._onPointerUp, this);
-        p.on('pointerdown', this._onPointerDown, this);
-        p.on('pointermove', this._onPointerMove, this);
-        p.on('pointertap', this._onPointerTap, this);
-
-        // handle native wheel
-        document.addEventListener('wheel', this._onWheel, {passive: false});
-
-        this._eventsRegistered = true;
-	}
-
-	 _onWheel (event) {
-	    event.preventDefault();
-    }
-
-	 _onPointerTap (event) {
-
-    }
-
-	 _onPointerMove (event) {
-
-    }
-
-	 _onPointerUp (event) {
-
-    }
-
-     _onPointerDown (event) {
-
-    }
-
-	 _detachEvents() {
-		if (!this._eventsRegistered) {
-			return;
-		}
-
-        const p = this.provider;
-
-        p.off('pointerup', this._onPointerUp, this);
-        p.off('pointerupoutside', this._onPointerUp, this);
-        p.off('pointerdown', this._onPointerDown, this);
-        p.off('pointermove', this._onPointerMove, this);
-        p.off('pointertap', this._onPointerTap, this);
-
-        // unlink
-        document.removeEventListener('wheel', this._onWheel);
-
-		this._eventsRegistered = false;
-	}
-
-	 register(chart) {
-		if (this._charts.has(chart))
-			return;
-
-		this._charts.add(chart);
-		this._attachEvents();
-	}
-
-	 unregister(chart) {
-		this._charts.delete(chart);
-
-		if (this._charts.size === 0) {
-			this._detachEvents();
-		}
-	}
-
-	 update(deltaTime) {
-
-    }
-}
-
 core.Renderer.registerPlugin('batch', core.BatchRenderer);
 core.Renderer.registerPlugin('interaction', InteractionManager);
 
@@ -7663,6 +7672,7 @@ class Chart {
 exports.ArrayChainDataProvider = ArrayChainDataProvider;
 exports.ArrayLikeDataProvider = ArrayLikeDataProvider;
 exports.BaseDrawer = BaseDrawer;
+exports.BaseInput = BaseInput;
 exports.Chart = Chart;
 exports.DEFAULT_LABELS_STYLE = DEFAULT_LABELS_STYLE;
 exports.DEFAULT_LABELS_STYLE_PARENT = DEFAULT_LABELS_STYLE_PARENT;
@@ -7670,8 +7680,10 @@ exports.DEFAULT_STYLE = DEFAULT_STYLE;
 exports.DataTransformPlugin = DataTransformPlugin;
 exports.ObjectDataProvider = ObjectDataProvider;
 exports.Observable = Observable;
+exports.PixiInput = PixiInput;
 exports.PluggableProvider = PluggableProvider;
 exports.Range = Range;
 exports.Series = Series;
+exports.Transform = Transform;
 exports.parseStyle = parseStyle;
 //# sourceMappingURL=pixi-charts.js.map
