@@ -33,7 +33,12 @@ export class PixiInput extends BaseInput {
         p.on('pointertap', this._onPointerTap, this);
 
         // handle native wheel
-        document.addEventListener('wheel', this._onWheel, {passive: false});
+
+        if ((p as any).interactionDOMElement) {
+            (p as any).interactionDOMElement.addEventListener('wheel', this._onWheel, {passive: false})
+        } else {
+            document.addEventListener('wheel', this._onWheel, {passive: false});
+        }
 
         this._eventsRegistered = true;
 	}
@@ -72,7 +77,11 @@ export class PixiInput extends BaseInput {
         p.off('pointertap', this._onPointerTap, this);
 
         // unlink
-        document.removeEventListener('wheel', this._onWheel);
+        if ((p as any).interactionDOMElement) {
+            (p as any).interactionDOMElement.removeEventListener('wheel', this._onWheel)
+        } else {
+            document.removeEventListener('wheel', this._onWheel);
+        }
 
 		this._eventsRegistered = false;
 	}

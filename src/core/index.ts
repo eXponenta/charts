@@ -1,3 +1,5 @@
+export * from './input';
+export * from './Transform';
 export * from './Range';
 export * from './Observable'
 export * from './Series';

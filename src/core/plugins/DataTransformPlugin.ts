@@ -4,7 +4,7 @@ import { IRangeObject } from "../Range";
 import {IDataFetchResult, IObjectData} from "../ISeriesDataOptions";
 import {Transform} from "../Transform";
 
-type DataTransformPluginResult = IDataFetchResult<IObjectData> & { trimmedSourceBounds?: IRangeObject, transform?: Transform };
+export type DataTransformPluginResult = IDataFetchResult<IObjectData> & { trimmedSourceBounds?: IRangeObject, transform?: Transform };
 
 class DataBounds implements IRangeObject {
     fromX = Infinity;
